@@ -1,0 +1,1 @@
+import React from 'react'; export const MagicBox: React.FC = () => null;
