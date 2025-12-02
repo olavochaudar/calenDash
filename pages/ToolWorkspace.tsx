@@ -1,1 +1,0 @@
-import React from 'react'; export const ToolWorkspace: React.FC = () => null;
