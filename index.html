@@ -3,9 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ✅ AQUI ESTÁ O ÍCONE QUE VOCÊ PEDIU -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
     <title>CalenDash - Gestão de Calendários</title>
 
-    <!-- Tailwind via CDN (Apenas para garantir que funcione agora, depois removemos) -->
+    <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -53,11 +57,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- 👇 ESSA É A LINHA QUE FALTAVA 👇 -->
-    <!-- Se seu arquivo principal estiver na pasta src e for .tsx: -->
+    <!-- Script principal do React -->
     <script type="module" src="/src/main.tsx"></script>
-
-    <!-- OBS: Se der erro 404 no console, tente mudar para: -->
-    <!-- <script type="module" src="/main.tsx"></script> -->
   </body>
 </html>

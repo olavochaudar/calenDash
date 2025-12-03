@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- Corpo do Calendário Preenchido -->
+  <rect x="2" y="4" width="20" height="18" rx="3" ry="3" fill="#6366f1" />
+  
+  <!-- Ganchos superiores -->
+  <path d="M8 2V6" stroke="#6366f1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 2V6" stroke="#6366f1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Detalhes internos em branco -->
+  <line x1="2" y1="10" x2="22" y2="10" stroke="#ffffff" stroke-width="2" />
+  
+  <!-- Pontinhos (Dias) -->
+  <circle cx="8" cy="14" r="1.5" fill="#ffffff" />
+  <circle cx="12" cy="14" r="1.5" fill="#ffffff" />
+  <circle cx="16" cy="14" r="1.5" fill="#ffffff" />
+  <circle cx="8" cy="18" r="1.5" fill="#ffffff" />
+  <circle cx="12" cy="18" r="1.5" fill="#ffffff" />
+  <circle cx="16" cy="18" r="1.5" fill="#ffffff" />
+</svg>
