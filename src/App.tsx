@@ -11,7 +11,7 @@ import { Projects } from '../pages/Projects.tsx';
 import { ProjectDetails } from '../pages/ProjectDetails.tsx';
 import { Clients } from '../pages/Clients.tsx';
 import { Reports } from '../pages/Reports.tsx';
-import { SocialTracker } from '../pages/SocialTracker.tsx';
+import { MarketingDashboard } from '../pages/SocialTracker.tsx';
 import { Settings } from '../pages/Settings.tsx';
 import { Templates } from '../pages/Templates.tsx';
 import { TemplateDetails } from '../pages/TemplateDetails.tsx';
@@ -174,7 +174,7 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute user={user}>
               <Layout user={user} onLogout={handleLogout}>
-                <SocialTracker />
+                <MarketingDashboard />
               </Layout>
             </ProtectedRoute>
           }

@@ -1,1375 +1,1747 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
-import { Button } from '../components/Button';
-import { 
-    Instagram, TrendingUp, Users, Heart, MessageCircle, 
-    Share2, Activity, Link2, CheckCircle2, LogOut, Loader2, CalendarClock, Image as ImageIcon, Edit, Save, X, RotateCcw, Check, Trash2, Calendar, Clock, Wifi, WifiOff, Eye, BarChart2, AlertTriangle, FileText, Download, PieChart, RefreshCcw, AtSign, Globe
+import React, { useState, useEffect } from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from 'recharts';
+import {
+  TrendingUp,
+  Activity,
+  LogOut,
+  Loader2,
+  Layers,
+  Target,
+  Calculator,
+  Lightbulb,
+  ShieldAlert,
+  Rocket,
+  Trash2,
+  Plus,
+  LayoutDashboard,
+  CheckCircle2,
+  ClipboardList,
+  Swords,
+  DollarSign,
+  Megaphone,
+  Trophy,
+  Zap,
+  ArrowUpRight,
+  X,
+  Edit3,
+  User,
+  Download,
+  Filter,
+  Instagram,
+  Facebook,
+  Search,
+  Video,
+  Linkedin,
+  Globe,
+  Youtube,
+  Wallet,
+  CreditCard,
 } from 'lucide-react';
 
-// Dados Reais Aproximados para contas populares (Simulação de API)
-const KNOWN_INFLUENCERS: Record<string, any> = {
-    'neymarjr': { followers: 219000000, following: 1800, posts: 5600, engagement: 2.1 },
-    'anitta': { followers: 65200000, following: 2400, posts: 4100, engagement: 1.8 },
-    'cristiano': { followers: 620000000, following: 580, posts: 3600, engagement: 3.5 },
-    'virginia': { followers: 46000000, following: 1200, posts: 2500, engagement: 5.2 },
-    'whinderssonnunes': { followers: 59000000, following: 1500, posts: 2900, engagement: 4.1 },
-    'tatawerneck': { followers: 57000000, following: 2100, posts: 4500, engagement: 3.9 },
-    'maisa': { followers: 48000000, following: 1300, posts: 1200, engagement: 2.5 },
-    'larissamanoela': { followers: 54000000, following: 1600, posts: 3100, engagement: 2.2 },
-    'casimiro': { followers: 4500000, following: 900, posts: 1500, engagement: 12.5 }, // Alto engajamento
-    'netflixbrasil': { followers: 32000000, following: 150, posts: 8000, engagement: 1.1 },
-    'nubank': { followers: 3100000, following: 50, posts: 4200, engagement: 0.9 },
-};
+// --- ESTILOS GLOBAIS ---
+const GlobalStyles = () => (
+  <style>{`
+        /* Remove setas do input number */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        /* Reset padrão */
+        body, html { height: 100%; width: 100%; margin: 0; padding: 0; overflow-x: hidden; background-color: #050507; }
+        
+        /* SCROLLBAR DISCRETA (Horizontal e Vertical) */
+        .thin-scrollbar::-webkit-scrollbar {
+            width: 6px;  /* Largura para vertical */
+            height: 6px; /* Altura para horizontal */
+        }
+        .thin-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02); /* Fundo sutil */
+            border-radius: 4px;
+        }
+        .thin-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15); /* Cor da barra */
+            border-radius: 4px;
+        }
+        .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3); /* Cor ao passar o mouse */
+        }
 
-// Interface for Scheduled Posts
-interface ScheduledPost {
-    id: string;
-    caption: string;
-    media?: string;
-    date: string;
-    time: string;
-    platform: 'instagram' | 'tiktok';
-    createdAt: string;
+        /* Animações */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    `}</style>
+);
+
+// --- TIPOS ---
+type PlatformType =
+  | 'Meta Ads'
+  | 'Instagram Ads'
+  | 'Google Ads'
+  | 'TikTok Ads'
+  | 'YouTube Ads'
+  | 'LinkedIn'
+  | 'Outros';
+
+interface Campaign {
+  id: string;
+  name: string;
+  platform: PlatformType;
+  spend: number;
+  revenue: number;
+  clicks: number;
+  status: 'Ativa' | 'Pausada';
 }
 
-// Helper to generate consistent pseudo-random numbers from a string seed
-const hashCode = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash);
+interface Expense {
+  id: string;
+  description: string;
+  category: 'Mídia' | 'Ferramentas' | 'Equipe' | 'Outros';
+  amount: number;
+  date: string;
+}
+
+interface ContentPost {
+  id: string;
+  caption: string;
+  funnelStage: 'Topo' | 'Meio' | 'Fundo';
+  date: string;
+  status: 'Ideia' | 'Agendado' | 'Publicado';
+}
+interface Competitor {
+  id: string;
+  name: string;
+  strength: string;
+  weakness: string;
+}
+interface Task {
+  id: string;
+  text: string;
+  done: boolean;
+}
+interface StrategyData {
+  personaName: string;
+  personaJob: string;
+  personaPain: string;
+  personaDesire: string;
+  swotStrengths: string;
+  swotWeaknesses: string;
+  swotOpportunities: string;
+  swotThreats: string;
+}
+interface Targets {
+  followers: number;
+  roas: number;
+  engagement: number;
+}
+interface HistoryPoint {
+  date: string;
+  followers: number;
+  engagement: number;
+}
+
+interface MarketingProfile {
+  brandName: string;
+  history: HistoryPoint[];
+  strategy: StrategyData;
+  campaigns: Campaign[];
+  expenses: Expense[];
+  content: ContentPost[];
+  competitors: Competitor[];
+  tasks: Task[];
+  targets: Targets;
+  lastLikes: number;
+  lastComments: number;
+}
+
+// --- COMPONENTES UI ---
+
+const GlassCard = ({
+  children,
+  className = '',
+  onClick,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+}) => (
+  <div
+    onClick={onClick}
+    className={`bg-[#13131a]/80 backdrop-blur-xl border border-white/5 rounded-2xl shadow-xl transition-all duration-300 relative z-10 ${
+      onClick
+        ? 'cursor-pointer hover:border-indigo-500/30 hover:shadow-indigo-500/10 hover:-translate-y-1'
+        : ''
+    } ${className}`}
+  >
+    {children}
+  </div>
+);
+
+const ProgressBar = ({
+  current,
+  max,
+  color,
+}: {
+  current: number;
+  max: number;
+  color: string;
+}) => {
+  const percentage = Math.min(100, Math.max(0, (current / (max || 1)) * 100));
+  return (
+    <div className='w-full bg-gray-800 h-1.5 rounded-full mt-3 overflow-hidden'>
+      <div
+        className={`h-full rounded-full transition-all duration-1000 ${color}`}
+        style={{ width: `${percentage}%` }}
+      ></div>
+    </div>
+  );
 };
 
-const formatNumber = (num: number) => {
-    if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-    return num.toString();
+const NavButton = ({ id, activeTab, setActiveTab, icon: Icon, label }: any) => (
+  <button
+    onClick={() => setActiveTab(id)}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 cursor-pointer select-none ${
+      activeTab === id
+        ? 'bg-white text-black shadow-lg shadow-white/10 scale-105 z-20'
+        : 'text-gray-400 hover:text-white hover:bg-white/5'
+    }`}
+  >
+    <Icon size={16} /> <span className='hidden md:inline'>{label}</span>
+  </button>
+);
+
+const PlatformIcon = ({ platform }: { platform: string }) => {
+  switch (platform) {
+    case 'Meta Ads':
+      return (
+        <div className='text-blue-500'>
+          <Facebook size={16} />
+        </div>
+      );
+    case 'Instagram Ads':
+      return (
+        <div className='text-pink-500'>
+          <Instagram size={16} />
+        </div>
+      );
+    case 'Google Ads':
+      return (
+        <div className='text-yellow-500'>
+          <Search size={16} />
+        </div>
+      );
+    case 'TikTok Ads':
+      return (
+        <div className='text-pink-400'>
+          <Video size={16} />
+        </div>
+      );
+    case 'YouTube Ads':
+      return (
+        <div className='text-red-500'>
+          <Youtube size={16} />
+        </div>
+      );
+    case 'LinkedIn':
+      return (
+        <div className='text-blue-400'>
+          <Linkedin size={16} />
+        </div>
+      );
+    default:
+      return (
+        <div className='text-gray-400'>
+          <Globe size={16} />
+        </div>
+      );
+  }
 };
 
-export const SocialTracker: React.FC = () => {
-  const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | null>(null);
-  const [username, setUsername] = useState('@usuario');
-  const [profileImage, setProfileImage] = useState('');
-  const [extractedPreview, setExtractedPreview] = useState('');
-  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
-  // PDF Export State
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState(false);
-  
-  // Dynamic Real-feel Stats
-  const [stats, setStats] = useState({
-      followers: 0,
-      following: 0,
-      posts: 0,
-      engagement: 0.0,
-      avgLikes: 0,
-      avgComments: 0,
-      avgShares: 0,
-      avgReach: 0,
-      avgImpressions: 0,
-      audience: {
-          male: 50,
-          female: 50,
-          ages: [] as { name: string, value: number }[]
-      }
-  });
-  const [chartData, setChartData] = useState<any[]>([]);
-
-  // Editing Buffer State
-  const [editingStats, setEditingStats] = useState<typeof stats | null>(null);
-  const [editingChartData, setEditingChartData] = useState<any[]>([]);
-
-  // Scheduled Posts State
-  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
-  
-  // New Post Form State
-  const [postCaption, setPostCaption] = useState('');
-  const [postDate, setPostDate] = useState('');
-  const [postTime, setPostTime] = useState('');
-  const [postMedia, setPostMedia] = useState('');
-
-  // Modals
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Network Detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Persistence Logic
-  useEffect(() => {
-    const savedConnection = localStorage.getItem('calendash_social_conn');
-    if (savedConnection) {
-        const data = JSON.parse(savedConnection);
-        // Only restore if valid data exists
-        if (data.username && data.platform) {
-            setUrl(data.url || '');
-            setPlatform(data.platform);
-            setUsername(data.username);
-            setProfileImage(data.profileImage);
-            setScheduledPosts(data.scheduledPosts || []);
-            
-            // Check if there are saved custom stats/chart data, otherwise generate
-            if (data.customStats) {
-                setStats(data.customStats);
-                setChartData(data.customChartData);
-            } else {
-                generateRealFeelData(data.username);
-            }
-            setIsConnected(true);
-        }
-    }
-  }, []);
-
-  // Update localStorage helper
-  const updateLocalStorage = (newData: any) => {
-      const current = localStorage.getItem('calendash_social_conn');
-      const parsed = current ? JSON.parse(current) : {};
-      localStorage.setItem('calendash_social_conn', JSON.stringify({ ...parsed, ...newData }));
-  };
-
-  const generateRealFeelData = (userHandle: string, updateState = true) => {
-      const cleanHandle = userHandle.replace('@', '').toLowerCase().trim();
-      const knownProfile = KNOWN_INFLUENCERS[cleanHandle];
-      const seed = hashCode(cleanHandle);
-      
-      let baseFollowers = 0;
-      let following = 0;
-      let posts = 0;
-      let engagementRate = 0;
-
-      if (knownProfile) {
-          // Use Real Data
-          baseFollowers = knownProfile.followers;
-          following = knownProfile.following;
-          posts = knownProfile.posts;
-          engagementRate = knownProfile.engagement;
-      } else {
-          // Simulate Realistic Data based on seed
-          if (seed % 100 < 5) baseFollowers = 1000000 + (seed % 5000000); // 1M - 6M
-          else if (seed % 100 < 20) baseFollowers = 100000 + (seed % 900000); // 100k - 1M
-          else if (seed % 100 < 50) baseFollowers = 10000 + (seed % 90000); // 10k - 100k
-          else baseFollowers = 100 + (seed % 5000); // Normal user
-          
-          following = (seed % 2000) + 50;
-          posts = (seed % 500) + 12;
-          engagementRate = 1 + (seed % 60) / 10;
-      }
-      
-      const avgLikes = Math.floor(baseFollowers * (engagementRate / 100));
-      const avgComments = Math.floor(avgLikes * 0.03);
-      const avgShares = Math.floor(avgLikes * 0.015);
-
-      // Generate Reach and Impressions
-      const reachFactor = 0.15 + (seed % 20) / 100; // 0.15 to 0.35
-      const avgReach = Math.floor(baseFollowers * reachFactor);
-      const avgImpressions = Math.floor(avgReach * (1.2 + (seed % 30) / 100));
-
-      // Audience Generation
-      const genderSeed = seed % 100;
-      let femalePerc = 50;
-      if (genderSeed < 30) femalePerc = 65 + (seed % 20); // Mostly female
-      else if (genderSeed > 70) femalePerc = 20 + (seed % 20); // Mostly male
-      else femalePerc = 40 + (seed % 20); // Balanced
-      // Clamp between 10 and 90
-      femalePerc = Math.max(10, Math.min(90, femalePerc));
-      const malePerc = 100 - femalePerc;
-
-      const ageGroupsRaw = [
-          { name: '13-17', value: 10 + (seed % 15) },
-          { name: '18-24', value: 30 + (seed % 20) },
-          { name: '25-34', value: 25 + (seed % 15) },
-          { name: '35-44', value: 10 + (seed % 10) },
-          { name: '45+', value: 5 + (seed % 5) }
-      ];
-      // Normalize to 100%
-      const totalAge = ageGroupsRaw.reduce((a, b) => a + b.value, 0);
-      const ageDistribution = ageGroupsRaw.map(g => ({ ...g, value: Math.round((g.value / totalAge) * 100) }));
-
-      const newStats = {
-          followers: baseFollowers,
-          following: following,
-          posts: posts,
-          engagement: engagementRate,
-          avgLikes,
-          avgComments,
-          avgShares,
-          avgReach,
-          avgImpressions,
-          audience: {
-              male: malePerc,
-              female: femalePerc,
-              ages: ageDistribution
-          }
-      };
-
-      // Generate Chart Data Scaling with Followers
-      const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'];
-      const graph = months.map((m, i) => {
-          // Add some randomness to growth curve
-          const randomGrowth = (seed + i) % 10; // 0-9
-          const trendFactor = 0.9 + (i * 0.05) + (randomGrowth / 100); 
-          
-          return {
-              name: m,
-              followers: Math.floor(baseFollowers * trendFactor),
-              engagement: engagementRate + (Math.sin(i + seed) * 0.5)
-          };
-      });
-
-      if (updateState) {
-          setStats(newStats);
-          setChartData(graph);
-      }
-      
-      return { stats: newStats, chartData: graph };
-  };
-
-  const extractIdentity = (input: string) => {
-      const clean = input.trim();
-      let platform: 'instagram' | 'tiktok' | null = null;
-      let username = '';
-
-      if (clean.includes('instagram.com')) {
-          platform = 'instagram';
-          const parts = clean.split('instagram.com/');
-          if (parts[1]) {
-              username = parts[1].split('/')[0].split('?')[0];
-          }
-      } else if (clean.includes('tiktok.com')) {
-          platform = 'tiktok';
-          const parts = clean.split('tiktok.com/');
-          if (parts[1]) {
-               let userPart = parts[1].split('?')[0];
-               if (userPart.includes('@')) userPart = userPart.split('@')[1];
-               username = userPart.replace('/', '');
-          }
-      } else if (clean.startsWith('@')) {
-          username = clean.substring(1);
-          platform = 'instagram'; // Default guess
-      } else {
-          // Fallback: assume it's just a username if no domain
-          if (!clean.includes('.') && !clean.includes('/')) {
-             username = clean;
-             platform = 'instagram';
-          }
-      }
-
-      return { platform, username };
-  };
-
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value;
-      setUrl(val);
-      const { platform: extractedPlat, username: extractedUser } = extractIdentity(val);
-      
-      if (!isConnected) {
-          if (extractedPlat) setPlatform(extractedPlat);
-          if (extractedUser) setExtractedPreview(extractedUser);
-      }
-  };
-
-  const handleConnect = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!isOnline) return;
-      
-      // We prioritize values in the fields (platform state and extractedPreview) 
-      // in case the user manually edited them after pasting the URL.
-      if (!platform && !extractedPreview) return;
-      
-      setLoading(true);
-      
-      const finalUser = extractedPreview;
-      const finalPlatform = platform || 'instagram';
-
-      setTimeout(() => {
-          const finalUsername = '@' + finalUser;
-          
-          // Use unavatar with fallback
-          const realProfileImage = finalPlatform === 'instagram' 
-            ? `https://unavatar.io/instagram/${finalUser}`
-            : `https://unavatar.io/${finalUser}`; 
-
-          setPlatform(finalPlatform);
-          setUsername(finalUsername);
-          setProfileImage(realProfileImage);
-          const generated = generateRealFeelData(finalUsername); // Generate unique stats
-          
-          // Trigger Success Animation
-          setLoading(false);
-          setShowSuccessAnimation(true);
-          setIsConnected(true);
-          setExtractedPreview('');
-          setUrl(''); // Clear URL input
-
-          updateLocalStorage({
-              url: `https://${finalPlatform}.com/${finalUser}`,
-              platform: finalPlatform,
-              username: finalUsername,
-              profileImage: realProfileImage,
-              customStats: generated.stats,
-              customChartData: generated.chartData,
-              scheduledPosts: scheduledPosts
-          });
-
-          // Hide animation after 2.5s
-          setTimeout(() => {
-              setShowSuccessAnimation(false);
-          }, 2500);
-
-      }, 1500);
-  };
-
-  const handleDisconnect = () => {
-      setIsConnected(false);
-      setUrl('');
-      setPlatform(null);
-      setUsername('@usuario');
-      setProfileImage('');
-      setExtractedPreview('');
-      setStats({
-          followers: 0,
-          following: 0,
-          posts: 0,
-          engagement: 0,
-          avgLikes: 0,
-          avgComments: 0,
-          avgShares: 0,
-          avgReach: 0,
-          avgImpressions: 0,
-          audience: { male: 50, female: 50, ages: [] }
-      });
-      setChartData([]);
-      setScheduledPosts([]);
-      localStorage.removeItem('calendash_social_conn');
-  };
-
-  const handleExportReport = () => {
-      setIsExporting(true);
-      setExportSuccess(false);
-      
-      // Simulate generation
-      setTimeout(() => {
-          setIsExporting(false);
-          setExportSuccess(true);
-          setTimeout(() => setExportSuccess(false), 3000);
-      }, 2000);
-  };
-
-  // Editor Handlers
-  const handleOpenEditor = () => {
-      setEditingStats({ ...stats });
-      setEditingChartData(JSON.parse(JSON.stringify(chartData)));
-      setIsEditorOpen(true);
-  };
-
-  const handleEditorStatChange = (key: keyof typeof stats, value: string) => {
-      if (!editingStats) return;
-      const numValue = parseFloat(value);
-      setEditingStats(prev => prev ? ({ ...prev, [key]: isNaN(numValue) ? 0 : numValue }) : null);
-  };
-
-  // Audience Handlers
-  const handleAudienceGenderChange = (femaleVal: string) => {
-      if (!editingStats) return;
-      let val = parseFloat(femaleVal);
-      if (val < 0) val = 0;
-      if (val > 100) val = 100;
-      setEditingStats({
-          ...editingStats,
-          audience: {
-              ...editingStats.audience,
-              female: val,
-              male: 100 - val
-          }
-      });
-  };
-
-  const handleAudienceAgeChange = (index: number, val: string) => {
-       if (!editingStats) return;
-       const newAges = [...editingStats.audience.ages];
-       newAges[index] = { ...newAges[index], value: parseFloat(val) || 0 };
-       setEditingStats({
-           ...editingStats,
-           audience: {
-               ...editingStats.audience,
-               ages: newAges
-           }
-       });
-  };
-
-  const handleEditorChartChange = (index: number, key: string, value: string) => {
-      const newData = [...editingChartData];
-      newData[index] = { ...newData[index], [key]: parseFloat(value) || 0 };
-      setEditingChartData(newData);
-  };
-  
-  const saveCustomData = () => {
-      if (editingStats) {
-          setStats(editingStats);
-          setChartData(editingChartData);
-          updateLocalStorage({
-              customStats: editingStats,
-              customChartData: editingChartData
-          });
-      }
-      setIsEditorOpen(false);
-  };
-  
-  const resetToSimulation = () => {
-      if (confirm('Tem certeza? Isso irá descartar todas as edições manuais e restaurar os dados simulados originais.')) {
-          const generated = generateRealFeelData(username, false);
-          setEditingStats(generated.stats);
-          setEditingChartData(generated.chartData);
-      }
-  };
-
-  // Schedule Logic
-  const handlePostMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setPostMedia(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-      }
-  };
-
-  const handleSchedulePost = () => {
-      if (!postCaption && !postMedia) return;
-      if (!postDate || !postTime) return;
-
-      const newPost: ScheduledPost = {
-          id: Math.random().toString(36).substr(2, 9),
-          caption: postCaption,
-          media: postMedia,
-          date: postDate,
-          time: postTime,
-          platform: platform || 'instagram',
-          createdAt: new Date().toISOString()
-      };
-
-      const updatedPosts = [...scheduledPosts, newPost];
-      
-      // Sort by date/time
-      updatedPosts.sort((a, b) => {
-          return new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime();
-      });
-
-      setScheduledPosts(updatedPosts);
-      updateLocalStorage({ scheduledPosts: updatedPosts });
-      
-      // Reset Form
-      setPostCaption('');
-      setPostDate('');
-      setPostTime('');
-      setPostMedia('');
-      setIsScheduleModalOpen(false);
-  };
-
-  const handleDeletePost = (id: string) => {
-      if (window.confirm("Tem certeza que deseja excluir este post agendado?")) {
-        const updated = scheduledPosts.filter(p => p.id !== id);
-        setScheduledPosts(updated);
-        updateLocalStorage({ scheduledPosts: updated });
-      }
-  };
-
-  const TikTokIcon = () => (
-      <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24" className="text-white">
-          <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743l-.002-.001.002.001a2.895 2.895 0 0 1 3.183-4.51v-3.5a6.329 6.329 0 0 0-5.394 10.692 6.33 6.33 0 0 0 10.857-4.424V8.687a8.182 8.182 0 0 0 4.773 1.526V6.79a4.831 4.831 0 0 1-1.003-.104z"/>
-      </svg>
+// --- UTILITÁRIOS ---
+const formatNumber = (num: number) =>
+  new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(num);
+const formatCurrency = (val: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    val
   );
 
-  return (
-    <div className="space-y-8 pb-10">
-      
-      {/* Success Animation Overlay */}
-      {showSuccessAnimation && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fadeIn">
-              {/* Richer CSS Confetti */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  {[...Array(70)].map((_, i) => (
-                      <div 
-                        key={i}
-                        className="absolute"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `-20px`,
-                            animation: `confetti-fall ${1.5 + Math.random() * 2.5}s linear forwards`,
-                            animationDelay: `${Math.random() * 1.5}s`
-                        }}
-                      >
-                          <div 
-                            className="w-2.5 h-2.5 rounded-sm"
-                            style={{
-                                backgroundColor: ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#ec4899'][Math.floor(Math.random() * 6)],
-                                transform: `rotate(${Math.random() * 360}deg)`
-                            }}
-                          />
-                      </div>
-                  ))}
-              </div>
+export const MarketingDashboard: React.FC = () => {
+  const [profile, setProfile] = useState<MarketingProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'strategy' | 'finance' | 'content'
+  >('overview');
+  const [loading, setLoading] = useState(false);
+  const [contentFilter, setContentFilter] = useState<
+    'Todos' | 'Topo' | 'Meio' | 'Fundo'
+  >('Todos');
 
-              <div className="flex flex-col items-center animate-slideUp relative z-10">
-                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_#22c55e] animate-bounce">
-                      <Check size={48} className="text-white" strokeWidth={4} />
-                  </div>
-                  <h2 className="text-3xl font-bold text-white mb-2 text-center animate-fadeIn" style={{animationDelay: '0.2s'}}>Conectado com Sucesso!</h2>
-                  <p className="text-gray-400 text-center animate-fadeIn" style={{animationDelay: '0.4s'}}>Sincronizando dados históricos...</p>
-              </div>
-              <style>{`
-                @keyframes confetti-fall {
-                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-                    25% { transform: translateY(25vh) rotate(90deg); opacity: 1; }
-                    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-                }
-              `}</style>
-          </div>
-      )}
+  // Modais e Inputs
+  const [editingKpi, setEditingKpi] = useState<
+    'audience' | 'financial' | 'engagement' | null
+  >(null);
+  const [tempAudience, setTempAudience] = useState({ current: '', target: '' });
+  const [tempFinance, setTempFinance] = useState({ targetRoas: '' });
+  const [tempEngagement, setTempEngagement] = useState({
+    likes: '',
+    comments: '',
+    target: '',
+  });
 
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-        <div>
-           <div className="flex flex-wrap items-center gap-3">
-               <h1 className="text-3xl font-bold text-white mb-2">Monitoramento Social</h1>
-               <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">
-                        <AlertTriangle size={10} /> Beta - Em Desenvolvimento
-                    </span>
-                    {!isOnline && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-yellow-500 text-xs font-bold animate-pulse">
-                            <WifiOff size={14} /> Modo Offline
-                        </div>
-                    )}
-                    {isOnline && isConnected && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-green-500 text-xs font-bold">
-                            <Wifi size={14} /> Online
-                        </div>
-                    )}
-               </div>
-           </div>
-           <p className="text-gray-400">
-             Conecte perfis para acompanhar crescimento e engajamento em tempo real.
-           </p>
+  const [brandInput, setBrandInput] = useState('');
+  const [taskInput, setTaskInput] = useState('');
+  const [contentInput, setContentInput] = useState({
+    caption: '',
+    date: '',
+    stage: 'Topo',
+  });
+  const [compInput, setCompInput] = useState({
+    name: '',
+    strength: '',
+    weakness: '',
+  });
+
+  // Inputs Financeiros
+  const [campaignInput, setCampaignInput] = useState<{
+    name: string;
+    platform: PlatformType;
+    spend: string;
+    revenue: string;
+  }>({
+    name: '',
+    platform: 'Meta Ads',
+    spend: '',
+    revenue: '',
+  });
+  const [expenseInput, setExpenseInput] = useState({
+    description: '',
+    amount: '',
+    category: 'Ferramentas',
+  });
+
+  const STORAGE_KEY = 'marketing_os_v9_scroll';
+
+  // --- AUTO-SAVE & LOAD ---
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.history) setProfile(parsed);
+      }
+    } catch (e) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (profile) localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  }, [profile]);
+
+  // --- HANDLERS ---
+  const handleInit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => {
+      setProfile({
+        brandName: brandInput || 'Minha Marca',
+        history: [
+          {
+            date: new Date().toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: 'short',
+            }),
+            followers: 0,
+            engagement: 0,
+          },
+        ],
+        strategy: {
+          personaName: '',
+          personaJob: '',
+          personaPain: '',
+          personaDesire: '',
+          swotStrengths: '',
+          swotWeaknesses: '',
+          swotOpportunities: '',
+          swotThreats: '',
+        },
+        campaigns: [],
+        expenses: [],
+        content: [],
+        competitors: [],
+        tasks: [],
+        targets: { followers: 1000, roas: 3, engagement: 5 },
+        lastLikes: 0,
+        lastComments: 0,
+      });
+      setLoading(false);
+    }, 1000);
+  };
+
+  // Funções de Edição KPI
+  const saveAudience = () => {
+    if (!profile) return;
+    const cf =
+      profile.history.length > 0
+        ? profile.history[profile.history.length - 1].followers
+        : 0;
+    const nh = [
+      ...profile.history,
+      {
+        date: new Date().toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: 'short',
+        }),
+        followers: parseInt(tempAudience.current) || cf,
+        engagement:
+          profile.history.length > 0
+            ? profile.history[profile.history.length - 1].engagement
+            : 0,
+      },
+    ];
+    setProfile({
+      ...profile,
+      history: nh,
+      targets: {
+        ...profile.targets,
+        followers: parseInt(tempAudience.target) || profile.targets.followers,
+      },
+    });
+    setEditingKpi(null);
+  };
+  const saveEngagement = () => {
+    if (!profile) return;
+    const l = parseInt(tempEngagement.likes) || profile.lastLikes;
+    const c = parseInt(tempEngagement.comments) || profile.lastComments;
+    const f =
+      profile.history.length > 0
+        ? profile.history[profile.history.length - 1].followers
+        : 1;
+    const r = f > 0 ? ((l + c) / f) * 100 : 0;
+    const nh = [...profile.history];
+    if (nh.length > 0) nh[nh.length - 1].engagement = r;
+    setProfile({
+      ...profile,
+      history: nh,
+      lastLikes: l,
+      lastComments: c,
+      targets: {
+        ...profile.targets,
+        engagement:
+          parseFloat(tempEngagement.target) || profile.targets.engagement,
+      },
+    });
+    setEditingKpi(null);
+  };
+  const saveFinancialTarget = () => {
+    if (!profile) return;
+    const target = parseFloat(tempFinance.targetRoas) || profile.targets.roas;
+    setProfile({ ...profile, targets: { ...profile.targets, roas: target } });
+    setEditingKpi(null);
+  };
+
+  // CRUD
+  const addTask = () => {
+    if (profile && taskInput) {
+      setProfile({
+        ...profile,
+        tasks: [
+          ...profile.tasks,
+          { id: Date.now().toString(), text: taskInput, done: false },
+        ],
+      });
+      setTaskInput('');
+    }
+  };
+  const toggleTask = (id: string) => {
+    if (profile)
+      setProfile({
+        ...profile,
+        tasks: profile.tasks.map((t) =>
+          t.id === id ? { ...t, done: !t.done } : t
+        ),
+      });
+  };
+  const deleteTask = (id: string) => {
+    if (profile)
+      setProfile({
+        ...profile,
+        tasks: profile.tasks.filter((t) => t.id !== id),
+      });
+  };
+  const addContent = () => {
+    if (profile && contentInput.caption) {
+      setProfile({
+        ...profile,
+        content: [
+          ...profile.content,
+          {
+            id: Date.now().toString(),
+            caption: contentInput.caption,
+            date: contentInput.date,
+            funnelStage: contentInput.stage as any,
+            status: 'Ideia',
+          },
+        ],
+      });
+      setContentInput({ caption: '', date: '', stage: 'Topo' });
+    }
+  };
+  const deleteContent = (id: string) => {
+    if (profile)
+      setProfile({
+        ...profile,
+        content: profile.content.filter((c) => c.id !== id),
+      });
+  };
+  const addCompetitor = () => {
+    if (profile && compInput.name) {
+      setProfile({
+        ...profile,
+        competitors: [
+          ...profile.competitors,
+          { id: Date.now().toString(), ...compInput },
+        ],
+      });
+      setCompInput({ name: '', strength: '', weakness: '' });
+    }
+  };
+  const deleteCompetitor = (id: string) => {
+    if (profile)
+      setProfile({
+        ...profile,
+        competitors: profile.competitors.filter((c) => c.id !== id),
+      });
+  };
+  const updateStrategy = (key: string, val: string) =>
+    profile &&
+    setProfile({
+      ...profile,
+      strategy: { ...profile.strategy, [key]: val } as any,
+    });
+
+  const addCampaign = () => {
+    if (!profile || !campaignInput.name) return;
+    const newCamp: Campaign = {
+      id: Date.now().toString(),
+      name: campaignInput.name,
+      platform: campaignInput.platform,
+      spend: parseFloat(campaignInput.spend) || 0,
+      revenue: parseFloat(campaignInput.revenue) || 0,
+      clicks: 0,
+      status: 'Ativa',
+    };
+    setProfile({ ...profile, campaigns: [...profile.campaigns, newCamp] });
+    setCampaignInput({ ...campaignInput, name: '', spend: '', revenue: '' });
+  };
+  const deleteCampaign = (id: string) => {
+    if (profile)
+      setProfile({
+        ...profile,
+        campaigns: profile.campaigns.filter((c) => c.id !== id),
+      });
+  };
+
+  const addExpense = () => {
+    if (!profile || !expenseInput.description) return;
+    const newExp: Expense = {
+      id: Date.now().toString(),
+      description: expenseInput.description,
+      amount: parseFloat(expenseInput.amount) || 0,
+      category: expenseInput.category as any,
+      date: new Date().toLocaleDateString('pt-BR'),
+    };
+    setProfile({ ...profile, expenses: [...profile.expenses, newExp] });
+    setExpenseInput({ description: '', amount: '', category: 'Ferramentas' });
+  };
+  const deleteExpense = (id: string) => {
+    if (profile)
+      setProfile({
+        ...profile,
+        expenses: profile.expenses.filter((e) => e.id !== id),
+      });
+  };
+
+  const handleExport = () => {
+    alert('Simulação: Relatório PDF gerado com sucesso.');
+  };
+  const handleReset = () => {
+    if (confirm('Tem certeza? Isso apagará todos os dados.')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setProfile(null);
+    }
+  };
+
+  // --- RENDER ---
+  if (!profile) {
+    return (
+      <div className='min-h-screen bg-[#050507] flex items-center justify-center p-4 font-sans text-white relative overflow-hidden'>
+        <GlobalStyles />
+        <div className='fixed inset-0 z-0 pointer-events-none bg-[#050507]'>
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+          <div className='absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[128px]'></div>
+          <div className='absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[128px]'></div>
         </div>
-        {isConnected && !showSuccessAnimation && (
-            <div className="flex gap-3">
-                <Button 
-                    variant="secondary" 
-                    onClick={handleExportReport} 
-                    className="h-9 px-4 hidden md:flex" 
-                    disabled={isExporting}
-                >
-                    {isExporting ? (
-                        <>
-                            <Loader2 size={14} className="mr-2 animate-spin" /> Gerando PDF...
-                        </>
-                    ) : exportSuccess ? (
-                        <span className="text-green-500 flex items-center"><Check size={14} className="mr-2"/> Baixado!</span>
-                    ) : (
-                        <>
-                            <FileText size={14} className="mr-2" /> Exportar Relatório
-                        </>
-                    )}
-                </Button>
-                <Button variant="secondary" onClick={handleOpenEditor} className="h-9 px-4">
-                    <Edit size={14} className="mr-2" /> Editar Métricas
-                </Button>
-                <Button onClick={() => setIsScheduleModalOpen(true)}>
-                    <CalendarClock size={16} className="mr-2" /> Agendar Post
-                </Button>
-                <Button variant="danger" onClick={handleDisconnect} className="text-xs h-9 px-4 shadow-red-500/20 shadow-lg">
-                    <LogOut size={14} className="mr-2" /> Desconectar
-                </Button>
+        <GlassCard className='p-10 w-full max-w-md text-center relative z-10 border-white/10'>
+          <div className='w-20 h-20 bg-white text-black rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(255,255,255,0.3)] rotate-3'>
+            <Rocket size={40} />
+          </div>
+          <h1 className='text-4xl font-bold mb-2'>Marketing OS</h1>
+          <p className='text-gray-400 mb-8 text-sm'>
+            O sistema operacional definitivo para CMOs.
+          </p>
+          <form onSubmit={handleInit} className='space-y-4'>
+            <input
+              className='w-full bg-[#09090b]/50 border border-gray-700/50 text-white p-4 rounded-xl outline-none focus:border-white transition-all pl-4 text-center z-20 relative'
+              placeholder='Nome da Marca'
+              value={brandInput}
+              onChange={(e) => setBrandInput(e.target.value)}
+              required
+            />
+            <button className='w-full bg-white text-black font-bold p-4 rounded-xl flex justify-center items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-white/10 z-20 relative cursor-pointer'>
+              {loading ? (
+                <Loader2 className='animate-spin' />
+              ) : (
+                'Inicializar Sistema'
+              )}{' '}
+              <ArrowUpRight size={18} />
+            </button>
+          </form>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  // CÁLCULOS GERAIS
+  const currentStats =
+    profile.history.length > 0
+      ? profile.history[profile.history.length - 1]
+      : { followers: 0, engagement: 0 };
+  const totalAdSpend = profile.campaigns.reduce((acc, c) => acc + c.spend, 0);
+  const totalRevenue = profile.campaigns.reduce((acc, c) => acc + c.revenue, 0);
+  const totalExpenses = profile.expenses.reduce((acc, e) => acc + e.amount, 0);
+  const netProfit = totalRevenue - (totalAdSpend + totalExpenses);
+  const globalROAS = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
+
+  // Pie Chart Data (Media Mix)
+  const platformSpend = profile.campaigns.reduce((acc, c) => {
+    acc[c.platform] = (acc[c.platform] || 0) + c.spend;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const pieData = Object.keys(platformSpend).map((key) => ({
+    name: key,
+    value: platformSpend[key],
+    color: key.includes('Meta')
+      ? '#3b82f6'
+      : key.includes('Google')
+      ? '#eab308'
+      : key.includes('TikTok')
+      ? '#ec4899'
+      : key.includes('YouTube')
+      ? '#ef4444'
+      : '#6b7280',
+  }));
+
+  return (
+    <div className='min-h-screen bg-[#050507] text-gray-100 font-sans pb-20 overflow-x-hidden selection:bg-indigo-500/30 relative'>
+      <GlobalStyles />
+
+      {/* Background Fixed */}
+      <div className='fixed inset-0 z-0 pointer-events-none bg-[#050507]'>
+        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+        <div className='absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[500px] bg-indigo-900/10 rounded-full blur-[120px]'></div>
+        <div className='absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[120px]'></div>
+      </div>
+
+      {/* Navbar */}
+      <div className='fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-6xl px-4'>
+        <div className='bg-[#09090b]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex flex-col md:flex-row justify-between items-center shadow-2xl ring-1 ring-white/5 gap-4 md:gap-0'>
+          <div className='flex items-center gap-3 px-4'>
+            <div className='w-8 h-8 rounded-lg bg-white flex items-center justify-center font-bold text-black shadow-lg'>
+              {profile.brandName.charAt(0)}
             </div>
+            <div className='flex flex-col'>
+              <span className='font-bold text-sm'>{profile.brandName}</span>
+            </div>
+          </div>
+          <div className='flex gap-2 overflow-x-auto w-full md:w-auto justify-start md:justify-center thin-scrollbar px-2'>
+            <NavButton
+              id='overview'
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              icon={LayoutDashboard}
+              label='Visão Geral'
+            />
+            <NavButton
+              id='strategy'
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              icon={Target}
+              label='Estratégia'
+            />
+            <NavButton
+              id='finance'
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              icon={DollarSign}
+              label='Financeiro'
+            />
+            <NavButton
+              id='content'
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              icon={Layers}
+              label='Conteúdo'
+            />
+          </div>
+          <div className='flex items-center gap-2 px-2'>
+            <button
+              onClick={handleExport}
+              className='p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors relative z-20 cursor-pointer'
+              title='Exportar'
+            >
+              <Download size={18} />
+            </button>
+            <button
+              onClick={handleReset}
+              className='p-2.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg transition-colors relative z-20 cursor-pointer'
+              title='Sair'
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className='max-w-7xl mx-auto px-6 pt-36 pb-12 relative z-10'>
+        {/* === VISÃO GERAL === */}
+        {activeTab === 'overview' && (
+          <div className='space-y-8 animate-fade-in'>
+            <div className='relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-r from-[#1a1a2e] to-[#0f0f16] p-8 shadow-2xl'>
+              <div className='relative z-10 flex items-center justify-between'>
+                <div className='flex items-start gap-4'>
+                  <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 shadow-lg shadow-purple-500/10'>
+                    <Zap size={24} />
+                  </div>
+                  <div>
+                    <h3 className='text-xl font-bold text-white'>
+                      IA Autônoma em Breve
+                    </h3>
+                    <p className='mt-1 max-w-lg text-sm text-gray-400'>
+                      O módulo de conexão via API está em desenvolvimento. Por
+                      enquanto,{' '}
+                      <span className='text-white font-bold'>
+                        clique nos cards abaixo
+                      </span>{' '}
+                      para gerenciar seus dados manualmente.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
+              <GlassCard
+                onClick={() => {
+                  setTempAudience({
+                    current: currentStats.followers.toString(),
+                    target: profile.targets.followers.toString(),
+                  });
+                  setEditingKpi('audience');
+                }}
+                className='p-6 relative group'
+              >
+                <div className='flex justify-between items-start mb-2'>
+                  <span className='text-xs font-bold text-gray-500 flex items-center gap-2'>
+                    <Activity size={14} /> AUDIÊNCIA
+                  </span>
+                  <Edit3
+                    size={14}
+                    className='text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity'
+                  />
+                </div>
+                <h3 className='text-3xl font-bold text-white'>
+                  {formatNumber(currentStats.followers)}
+                </h3>
+                <div className='mt-4'>
+                  <div className='flex justify-between text-[10px] text-gray-400 mb-1'>
+                    <span>Progresso</span>
+                    <span>Meta: {formatNumber(profile.targets.followers)}</span>
+                  </div>
+                  <ProgressBar
+                    current={currentStats.followers}
+                    max={profile.targets.followers}
+                    color='bg-indigo-500'
+                  />
+                </div>
+              </GlassCard>
+
+              <GlassCard
+                onClick={() => {
+                  setTempFinance({
+                    targetRoas: profile.targets.roas.toString(),
+                  });
+                  setEditingKpi('financial');
+                }}
+                className='p-6 relative group'
+              >
+                <div className='flex justify-between items-start mb-2'>
+                  <span className='text-xs font-bold text-gray-500 flex items-center gap-2'>
+                    <DollarSign size={14} /> ROAS GLOBAL
+                  </span>
+                  <Edit3
+                    size={14}
+                    className='text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity'
+                  />
+                </div>
+                <h3
+                  className={`text-3xl font-bold ${
+                    globalROAS >= profile.targets.roas
+                      ? 'text-emerald-400'
+                      : 'text-yellow-400'
+                  }`}
+                >
+                  {globalROAS.toFixed(2)}x
+                </h3>
+                <div className='mt-4'>
+                  <div className='flex justify-between text-[10px] text-gray-400 mb-1'>
+                    <span>Eficiência</span>
+                    <span>Meta: {profile.targets.roas}x</span>
+                  </div>
+                  <ProgressBar
+                    current={globalROAS}
+                    max={profile.targets.roas}
+                    color='bg-emerald-500'
+                  />
+                </div>
+              </GlassCard>
+
+              <GlassCard
+                onClick={() => {
+                  setTempEngagement({
+                    likes: profile.lastLikes.toString(),
+                    comments: profile.lastComments.toString(),
+                    target: profile.targets.engagement.toString(),
+                  });
+                  setEditingKpi('engagement');
+                }}
+                className='p-6 relative group'
+              >
+                <div className='flex justify-between items-start mb-2'>
+                  <span className='text-xs font-bold text-gray-500 flex items-center gap-2'>
+                    <Target size={14} /> ENGAJAMENTO
+                  </span>
+                  <Edit3
+                    size={14}
+                    className='text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity'
+                  />
+                </div>
+                <h3 className='text-3xl font-bold text-white'>
+                  {currentStats.engagement.toFixed(2)}%
+                </h3>
+                <div className='mt-4'>
+                  <div className='flex justify-between text-[10px] text-gray-400 mb-1'>
+                    <span>Qualidade</span>
+                    <span>Meta: {profile.targets.engagement}%</span>
+                  </div>
+                  <ProgressBar
+                    current={currentStats.engagement}
+                    max={profile.targets.engagement}
+                    color='bg-pink-500'
+                  />
+                </div>
+              </GlassCard>
+
+              <GlassCard className='p-6 relative group'>
+                <div className='flex justify-between items-start mb-2'>
+                  <span className='text-xs font-bold text-gray-500 flex items-center gap-2'>
+                    <ClipboardList size={14} /> BACKLOG
+                  </span>
+                </div>
+                <h3 className='text-3xl font-bold text-white'>
+                  {profile.tasks.filter((t) => !t.done).length}
+                </h3>
+                <div className='mt-4 flex gap-2'>
+                  <input
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white outline-none z-20 relative'
+                    placeholder='+ Tarefa...'
+                    value={taskInput}
+                    onChange={(e) => setTaskInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addTask()}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addTask();
+                    }}
+                    className='bg-white/10 hover:bg-white/20 rounded-lg p-1.5 transition-colors z-20 relative cursor-pointer'
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </GlassCard>
+            </div>
+
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+              <GlassCard className='p-6 min-h-[400px]'>
+                <div className='flex justify-between items-center mb-8'>
+                  <h3 className='font-bold text-lg flex items-center gap-2 text-white'>
+                    <TrendingUp size={20} className='text-indigo-500' />{' '}
+                    Performance
+                  </h3>
+                </div>
+                <div className='h-[300px] w-full'>
+                  <ResponsiveContainer width='100%' height='100%'>
+                    <AreaChart data={profile.history}>
+                      <defs>
+                        <linearGradient
+                          id='colorFollowers'
+                          x1='0'
+                          y1='0'
+                          x2='0'
+                          y2='1'
+                        >
+                          <stop
+                            offset='5%'
+                            stopColor='#6366f1'
+                            stopOpacity={0.4}
+                          />
+                          <stop
+                            offset='95%'
+                            stopColor='#6366f1'
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray='3 3'
+                        stroke='#ffffff10'
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey='date'
+                        stroke='#52525b'
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke='#52525b'
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={formatNumber}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: '#09090b',
+                          borderColor: '#27272a',
+                          borderRadius: '12px',
+                        }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Area
+                        type='monotone'
+                        dataKey='followers'
+                        stroke='#6366f1'
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill='url(#colorFollowers)'
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </GlassCard>
+              <GlassCard className='p-6'>
+                <h3 className='font-bold text-lg mb-4 text-white'>
+                  Tarefas Recentes
+                </h3>
+                <div className='space-y-3 max-h-[300px] overflow-y-auto thin-scrollbar'>
+                  {profile.tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className='flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5 group'
+                    >
+                      <button
+                        onClick={() => toggleTask(task.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          task.done
+                            ? 'bg-emerald-500 border-emerald-500'
+                            : 'border-gray-600'
+                        }`}
+                      >
+                        {task.done && (
+                          <CheckCircle2 size={14} className='text-white' />
+                        )}
+                      </button>
+                      <span
+                        className={`flex-1 text-sm ${
+                          task.done
+                            ? 'line-through text-gray-500'
+                            : 'text-gray-200'
+                        }`}
+                      >
+                        {task.text}
+                      </span>
+                      <button
+                        onClick={() => deleteTask(task.id)}
+                        className='text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer'
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {profile.tasks.length === 0 && (
+                    <p className='text-gray-500 text-sm text-center py-4'>
+                      Nenhuma tarefa.
+                    </p>
+                  )}
+                </div>
+              </GlassCard>
+            </div>
+          </div>
+        )}
+
+        {/* === ABA: FINANCEIRO (REFORMULADA) === */}
+        {activeTab === 'finance' && (
+          <div className='space-y-6 animate-fade-in'>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              <GlassCard className='p-6'>
+                <p className='text-xs font-bold text-gray-500 mb-1 uppercase'>
+                  Total Mídia
+                </p>
+                <h2 className='text-3xl font-bold text-white'>
+                  {formatCurrency(totalAdSpend)}
+                </h2>
+              </GlassCard>
+              <GlassCard className='p-6'>
+                <p className='text-xs font-bold text-gray-500 mb-1 uppercase'>
+                  Receita Total
+                </p>
+                <h2 className='text-3xl font-bold text-emerald-400'>
+                  {formatCurrency(totalRevenue)}
+                </h2>
+              </GlassCard>
+              <GlassCard
+                className={`p-6 border-l-4 ${
+                  netProfit >= 0 ? 'border-l-emerald-500' : 'border-l-red-500'
+                }`}
+              >
+                <p className='text-xs font-bold text-gray-500 mb-1 uppercase'>
+                  Lucro Líquido
+                </p>
+                <h2
+                  className={`text-3xl font-bold ${
+                    netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'
+                  }`}
+                >
+                  {formatCurrency(netProfit)}
+                </h2>
+                <p className='text-xs text-gray-500 mt-1'>
+                  Inclui custos de ferramentas: {formatCurrency(totalExpenses)}
+                </p>
+              </GlassCard>
+            </div>
+
+            <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+              <div className='lg:col-span-2 space-y-6'>
+                <GlassCard className='p-6'>
+                  <h3 className='font-bold mb-2 text-white flex items-center gap-2'>
+                    <Target size={18} className='text-indigo-500' /> Performance
+                    de Mídia
+                  </h3>
+                  <p className='text-gray-500 text-xs mb-6 uppercase tracking-wider'>
+                    Novo Registro de Campanha
+                  </p>
+                  <div className='space-y-4 mb-6 bg-white/5 p-4 rounded-xl border border-white/5'>
+                    <div className='flex gap-2 overflow-x-auto pb-2 thin-scrollbar'>
+                      {[
+                        'Meta Ads',
+                        'Instagram Ads',
+                        'TikTok Ads',
+                        'Google Ads',
+                        'YouTube Ads',
+                        'LinkedIn',
+                        'Outros',
+                      ].map((p) => (
+                        <button
+                          key={p}
+                          onClick={() =>
+                            setCampaignInput({
+                              ...campaignInput,
+                              platform: p as any,
+                            })
+                          }
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                            campaignInput.platform === p
+                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg'
+                              : 'bg-black/20 border-gray-700 text-gray-400 hover:bg-black/40'
+                          }`}
+                        >
+                          <span className='flex items-center gap-1'>
+                            <PlatformIcon platform={p} /> {p.split(' ')[0]}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className='grid grid-cols-1 md:grid-cols-4 gap-3'>
+                      <input
+                        className='md:col-span-2 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                        placeholder='Nome da Campanha (Ex: Natal)'
+                        value={campaignInput.name}
+                        onChange={(e) =>
+                          setCampaignInput({
+                            ...campaignInput,
+                            name: e.target.value,
+                          })
+                        }
+                      />
+                      <input
+                        type='number'
+                        className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                        placeholder='Gasto (R$)'
+                        value={campaignInput.spend}
+                        onChange={(e) =>
+                          setCampaignInput({
+                            ...campaignInput,
+                            spend: e.target.value,
+                          })
+                        }
+                      />
+                      <div className='flex gap-2'>
+                        <input
+                          type='number'
+                          className='w-full bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                          placeholder='Receita (R$)'
+                          value={campaignInput.revenue}
+                          onChange={(e) =>
+                            setCampaignInput({
+                              ...campaignInput,
+                              revenue: e.target.value,
+                            })
+                          }
+                        />
+                        <button
+                          onClick={addCampaign}
+                          className='bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 flex items-center justify-center'
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className='max-h-[300px] overflow-y-auto thin-scrollbar'>
+                    <table className='w-full text-left text-sm'>
+                      <thead className='text-gray-500 text-xs uppercase sticky top-0 bg-[#13131a] z-10'>
+                        <tr>
+                          <th className='pb-3'>Plataforma</th>
+                          <th className='pb-3'>Gasto</th>
+                          <th className='pb-3'>ROAS</th>
+                          <th className='pb-3 text-right'>#</th>
+                        </tr>
+                      </thead>
+                      <tbody className='divide-y divide-gray-800'>
+                        {profile.campaigns.map((camp) => {
+                          const roas =
+                            camp.spend > 0 ? camp.revenue / camp.spend : 0;
+                          return (
+                            <tr key={camp.id} className='hover:bg-white/5'>
+                              <td className='py-3 flex items-center gap-2 text-white'>
+                                <PlatformIcon platform={camp.platform} />{' '}
+                                {camp.name}
+                              </td>
+                              <td className='py-3 text-gray-400'>
+                                {formatCurrency(camp.spend)}
+                              </td>
+                              <td className='py-3'>
+                                <span
+                                  className={`px-2 py-1 rounded text-xs font-bold ${
+                                    roas >= 4
+                                      ? 'bg-emerald-500/10 text-emerald-500'
+                                      : 'bg-yellow-500/10 text-yellow-500'
+                                  }`}
+                                >
+                                  {roas.toFixed(2)}x
+                                </span>
+                              </td>
+                              <td className='py-3 text-right'>
+                                <button
+                                  onClick={() => deleteCampaign(camp.id)}
+                                  className='text-gray-600 hover:text-red-500 cursor-pointer'
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </GlassCard>
+              </div>
+
+              <div className='space-y-6'>
+                <GlassCard className='p-6 h-[300px] flex flex-col'>
+                  <h3 className='font-bold mb-2 text-white text-sm'>
+                    Media Mix
+                  </h3>
+                  <div className='flex-1 relative'>
+                    {pieData.length > 0 ? (
+                      <ResponsiveContainer width='100%' height='100%'>
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            innerRadius={50}
+                            outerRadius={70}
+                            paddingAngle={5}
+                            dataKey='value'
+                          >
+                            {pieData.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={entry.color}
+                                stroke='none'
+                              />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip
+                            contentStyle={{
+                              backgroundColor: '#18181b',
+                              borderRadius: '8px',
+                              border: 'none',
+                            }}
+                            itemStyle={{ color: 'white' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className='h-full flex items-center justify-center text-gray-600 text-xs'>
+                        Sem dados.
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+
+                <GlassCard className='p-6'>
+                  <h3 className='font-bold mb-4 text-white flex items-center gap-2'>
+                    <Wallet size={18} className='text-pink-500' /> Despesas
+                    Extras
+                  </h3>
+                  <div className='flex gap-2 mb-4'>
+                    <input
+                      className='flex-1 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                      placeholder='Ex: Software'
+                      value={expenseInput.description}
+                      onChange={(e) =>
+                        setExpenseInput({
+                          ...expenseInput,
+                          description: e.target.value,
+                        })
+                      }
+                    />
+                    <input
+                      type='number'
+                      className='w-24 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                      placeholder='R$'
+                      value={expenseInput.amount}
+                      onChange={(e) =>
+                        setExpenseInput({
+                          ...expenseInput,
+                          amount: e.target.value,
+                        })
+                      }
+                    />
+                    <button
+                      onClick={addExpense}
+                      className='bg-pink-600 hover:bg-pink-700 text-white p-2 rounded-lg'
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  <div className='max-h-[150px] overflow-y-auto thin-scrollbar space-y-2'>
+                    {profile.expenses.map((exp) => (
+                      <div
+                        key={exp.id}
+                        className='flex justify-between items-center text-sm p-2 bg-white/5 rounded'
+                      >
+                        <span className='text-gray-300'>{exp.description}</span>
+                        <div className='flex items-center gap-3'>
+                          <span className='text-white font-mono'>
+                            {formatCurrency(exp.amount)}
+                          </span>
+                          <button
+                            onClick={() => deleteExpense(exp.id)}
+                            className='text-gray-600 hover:text-red-500 cursor-pointer'
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </GlassCard>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === ABA: ESTRATÉGIA === */}
+        {activeTab === 'strategy' && (
+          <div className='space-y-6 animate-fade-in'>
+            <GlassCard className='p-6'>
+              <div className='flex items-center gap-3 mb-6'>
+                <div className='p-2 bg-indigo-500/10 rounded-lg text-indigo-500'>
+                  <User size={20} />
+                </div>
+                <h2 className='text-xl font-bold text-white'>
+                  Persona & Identidade
+                </h2>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                <div>
+                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
+                    Perfil
+                  </label>
+                  <input
+                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm focus:border-indigo-500 outline-none'
+                    placeholder='Ex: João, 30 anos...'
+                    value={profile.strategy.personaName}
+                    onChange={(e) =>
+                      updateStrategy('personaName', e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
+                    Dores
+                  </label>
+                  <textarea
+                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm h-24 resize-none focus:border-red-500 outline-none'
+                    placeholder='O que tira o sono dele?'
+                    value={profile.strategy.personaPain}
+                    onChange={(e) =>
+                      updateStrategy('personaPain', e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
+                    Desejos
+                  </label>
+                  <textarea
+                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm h-24 resize-none focus:border-green-500 outline-none'
+                    placeholder='Qual o sonho dele?'
+                    value={profile.strategy.personaDesire}
+                    onChange={(e) =>
+                      updateStrategy('personaDesire', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </GlassCard>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <GlassCard className='p-6 border-l-4 border-l-emerald-500'>
+                <h3 className='font-bold text-white mb-4 flex items-center gap-2'>
+                  <ArrowUpRight size={18} className='text-emerald-500' /> Forças
+                  & Oportunidades
+                </h3>
+                <textarea
+                  className='w-full bg-black/20 border border-gray-700/50 rounded-xl p-3 text-sm text-gray-300 h-32 resize-none outline-none focus:bg-black/40'
+                  placeholder='Liste seus pontos fortes...'
+                  value={profile.strategy.swotStrengths}
+                  onChange={(e) =>
+                    updateStrategy('swotStrengths', e.target.value)
+                  }
+                />
+              </GlassCard>
+              <GlassCard className='p-6 border-l-4 border-l-red-500'>
+                <h3 className='font-bold text-white mb-4 flex items-center gap-2'>
+                  <X size={18} className='text-red-500' /> Fraquezas & Ameaças
+                </h3>
+                <textarea
+                  className='w-full bg-black/20 border border-gray-700/50 rounded-xl p-3 text-sm text-gray-300 h-32 resize-none outline-none focus:bg-black/40'
+                  placeholder='Onde o concorrente ganha?'
+                  value={profile.strategy.swotWeaknesses}
+                  onChange={(e) =>
+                    updateStrategy('swotWeaknesses', e.target.value)
+                  }
+                />
+              </GlassCard>
+            </div>
+            <GlassCard className='p-6'>
+              <h3 className='font-bold mb-6 flex items-center gap-2 text-white'>
+                <Swords size={18} className='text-orange-500' /> Concorrentes
+              </h3>
+              <div className='grid grid-cols-1 sm:grid-cols-4 gap-2 mb-6'>
+                <input
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                  placeholder='Nome'
+                  value={compInput.name}
+                  onChange={(e) =>
+                    setCompInput({ ...compInput, name: e.target.value })
+                  }
+                />
+                <input
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                  placeholder='Ponto Forte'
+                  value={compInput.strength}
+                  onChange={(e) =>
+                    setCompInput({ ...compInput, strength: e.target.value })
+                  }
+                />
+                <input
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                  placeholder='Ponto Fraco'
+                  value={compInput.weakness}
+                  onChange={(e) =>
+                    setCompInput({ ...compInput, weakness: e.target.value })
+                  }
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addCompetitor();
+                  }}
+                  className='bg-orange-600 hover:bg-orange-700 text-white rounded-lg flex items-center justify-center z-20 relative cursor-pointer'
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {profile.competitors.map((comp) => (
+                  <div
+                    key={comp.id}
+                    className='bg-gray-800/30 p-4 rounded-xl border border-gray-700/50 relative hover:border-gray-500 transition-colors'
+                  >
+                    <h4 className='font-bold text-white mb-2'>{comp.name}</h4>
+                    <p className='text-xs text-green-400 mb-1'>
+                      + {comp.strength}
+                    </p>
+                    <p className='text-xs text-red-400'>- {comp.weakness}</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCompetitor(comp.id);
+                      }}
+                      className='absolute top-3 right-3 text-gray-600 hover:text-red-500 z-20 relative cursor-pointer'
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {/* === ABA: CONTEÚDO === */}
+        {activeTab === 'content' && (
+          <div className='space-y-6 animate-fade-in'>
+            <GlassCard className='p-6'>
+              <div className='flex justify-between items-center mb-6'>
+                <h3 className='font-bold flex items-center gap-2 text-white'>
+                  <Layers size={20} className='text-pink-500' /> Pipeline de
+                  Conteúdo
+                </h3>
+                <div className='flex gap-2 relative z-20'>
+                  {['Todos', 'Topo', 'Meio', 'Fundo'].map((f) => (
+                    <button
+                      key={f}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContentFilter(f as any);
+                      }}
+                      className={`text-xs px-3 py-1 rounded-lg cursor-pointer ${
+                        contentFilter === f
+                          ? 'bg-pink-600 text-white'
+                          : 'bg-white/5 text-gray-400'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className='flex gap-4 mb-4'>
+                <input
+                  className='flex-1 bg-black/40 border border-gray-700/50 rounded-lg p-3 text-white text-sm outline-none focus:border-pink-500 z-20 relative'
+                  placeholder='Nova ideia...'
+                  value={contentInput.caption}
+                  onChange={(e) =>
+                    setContentInput({
+                      ...contentInput,
+                      caption: e.target.value,
+                    })
+                  }
+                />
+                <select
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-3 text-white text-sm outline-none z-20 relative'
+                  value={contentInput.stage}
+                  onChange={(e) =>
+                    setContentInput({ ...contentInput, stage: e.target.value })
+                  }
+                >
+                  <option>Topo</option>
+                  <option>Meio</option>
+                  <option>Fundo</option>
+                </select>
+                <input
+                  type='date'
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-3 text-white text-sm outline-none z-20 relative'
+                  value={contentInput.date}
+                  onChange={(e) =>
+                    setContentInput({ ...contentInput, date: e.target.value })
+                  }
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addContent();
+                  }}
+                  className='bg-pink-600 hover:bg-pink-700 text-white px-6 rounded-lg font-bold z-20 relative cursor-pointer'
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+            </GlassCard>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              {['Topo', 'Meio', 'Fundo'].map((stage) => {
+                if (contentFilter !== 'Todos' && contentFilter !== stage)
+                  return null;
+                return (
+                  <div
+                    key={stage}
+                    className={`bg-[#13131a]/40 border-t-4 ${
+                      stage === 'Topo'
+                        ? 'border-indigo-500'
+                        : stage === 'Meio'
+                        ? 'border-pink-500'
+                        : 'border-emerald-500'
+                    } border-x border-b border-gray-800 rounded-2xl p-4 min-h-[400px]`}
+                  >
+                    <h4 className='font-bold text-sm text-white mb-4 flex justify-between'>
+                      {stage}{' '}
+                      <span className='text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-400'>
+                        {
+                          profile.content.filter((c) => c.funnelStage === stage)
+                            .length
+                        }
+                      </span>
+                    </h4>
+                    <div className='space-y-3'>
+                      {profile.content
+                        .filter((c) => c.funnelStage === stage)
+                        .map((post) => (
+                          <div
+                            key={post.id}
+                            className='bg-gray-800/40 p-4 rounded-xl border border-gray-700/50 group relative hover:bg-gray-800 transition-all shadow-md'
+                          >
+                            <p className='text-sm text-gray-200 line-clamp-3 font-medium mb-3'>
+                              {post.caption}
+                            </p>
+                            <div className='flex justify-between items-center pt-3 border-t border-gray-700/50'>
+                              <span className='text-[10px] text-gray-400'>
+                                {new Date(post.date).toLocaleDateString(
+                                  'pt-BR'
+                                )}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteContent(post.id);
+                                }}
+                                className='text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20 relative cursor-pointer'
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
 
-      {!isConnected ? (
-          <div className="max-w-2xl mx-auto mt-10 animate-fadeIn">
-              {/* Connection Box Code - Same as before */}
-              <div className="bg-brand-surface border border-gray-800 rounded-2xl p-8 text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-500"></div>
-                  
-                  <div className="flex justify-center gap-4 mb-6">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-lg transform -rotate-6 transition-all duration-300 ${
-                          platform === 'instagram' ? 'bg-pink-500/10 text-pink-500 border-pink-500/50 scale-110' : 'bg-gray-900 text-gray-600 border-gray-800'
-                      }`}>
-                          <Instagram size={28} />
-                      </div>
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-lg transform rotate-6 transition-all duration-300 ${
-                           platform === 'tiktok' ? 'bg-[#00f2ea]/10 text-[#00f2ea] border-[#00f2ea]/50 scale-110' : 'bg-gray-900 text-gray-600 border-gray-800'
-                      }`}>
-                          <TikTokIcon />
-                      </div>
-                  </div>
-
-                  <h2 className="text-2xl font-bold text-white mb-3">Conectar Perfil Real</h2>
-                  <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                      Cole o link do perfil do Instagram ou TikTok. Nós identificaremos a conta automaticamente.
-                  </p>
-
-                  <form onSubmit={handleConnect} className="flex flex-col gap-4 max-w-md mx-auto">
-                      <div className="space-y-4">
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-indigo-500 transition-colors">
-                                <Link2 size={20} />
-                            </div>
-                            <input 
-                                type="text" 
-                                placeholder="ex: instagram.com/neymarjr"
-                                value={url}
-                                onChange={handleUrlChange}
-                                disabled={!isOnline}
-                                className="w-full bg-black/50 border border-gray-700 rounded-xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
-                                required
-                            />
-                        </div>
-
-                        {/* Separate Fields for Auto-population / Manual Correction */}
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                                    <Globe size={16} />
-                                </div>
-                                <select 
-                                    value={platform || ''} 
-                                    onChange={(e) => setPlatform(e.target.value as 'instagram' | 'tiktok')}
-                                    className="w-full bg-black/30 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
-                                >
-                                    <option value="" disabled>Plataforma</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="tiktok">TikTok</option>
-                                </select>
-                             </div>
-                             
-                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                                    <AtSign size={16} />
-                                </div>
-                                <input 
-                                    type="text" 
-                                    placeholder="Usuário"
-                                    value={extractedPreview}
-                                    onChange={(e) => setExtractedPreview(e.target.value)}
-                                    className="w-full bg-black/30 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                />
-                             </div>
-                        </div>
-
-                        {!isOnline && (
-                            <div className="flex items-center gap-2 justify-center text-sm font-medium animate-fadeIn bg-red-500/10 py-1 rounded-lg border border-red-500/20 text-red-400">
-                                <WifiOff size={14} /> Conexão necessária para buscar perfil
-                            </div>
-                        )}
-                      </div>
-
-                      <Button 
-                        type="submit" 
-                        isLoading={loading}
-                        disabled={(!platform && !url && !extractedPreview) || !isOnline}
-                        className="w-full py-4 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border-0"
-                      >
-                          {loading ? 'Buscando Dados...' : 'Conectar Conta'}
-                      </Button>
-                  </form>
-                  <p className="text-xs text-gray-600 mt-4">
-                      *Usamos APIs públicas para identificar o avatar e o usuário. Dados privados (insights) são simulados nesta demonstração.
-                  </p>
-              </div>
-          </div>
-      ) : (
-          <div className="space-y-6 animate-slideUp">
-              
-              {/* Profile Header */}
-              <div className="bg-brand-surface border border-gray-800 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
-                  {/* Background blur effect for profile */}
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 opacity-5 rounded-full filter blur-3xl pointer-events-none"></div>
-
-                  {/* Disconnect Button (In-Card) */}
-                  <div className="absolute top-4 right-4 z-20 md:hidden">
-                       <button onClick={handleDisconnect} className="text-gray-500 hover:text-red-500 p-2 bg-gray-900 rounded-full border border-gray-700">
-                           <LogOut size={18} />
-                       </button>
-                  </div>
-                  <div className="absolute top-6 right-6 z-20 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button
-                        onClick={handleDisconnect}
-                        className="p-2 bg-black/40 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-full transition-colors border border-transparent hover:border-red-500/30"
-                        title="Desconectar Conta"
-                     >
-                        <LogOut size={20} />
-                     </button>
-                  </div>
-
-                  <div className="flex items-center gap-6 relative z-10">
-                      <div className={`p-[3px] rounded-full ${platform === 'instagram' ? 'bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600' : 'bg-gradient-to-tr from-[#00f2ea] to-[#ff0050]'}`}>
-                          <div className="p-1 bg-black rounded-full overflow-hidden w-24 h-24 relative">
-                              <img 
-                                src={profileImage || "https://via.placeholder.com/150"} 
-                                alt={username} 
-                                className="w-full h-full object-cover rounded-full"
-                                onError={(e) => {
-                                    // Fallback to UI Avatars if Unavatar fails, but use proper name
-                                    const cleanName = username.replace('@','');
-                                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${cleanName}&background=random&color=fff`;
-                                }}
-                              />
-                          </div>
-                      </div>
-                      <div>
-                          <div className="flex items-center gap-2 mb-1">
-                              <h2 className="text-3xl font-bold text-white tracking-tight">{username}</h2>
-                              {platform === 'instagram' ? <Instagram size={22} className="text-pink-500" /> : <TikTokIcon />}
-                              {!isOnline ? (
-                                  <span className="bg-yellow-500/20 text-yellow-500 text-[10px] px-1.5 py-0.5 rounded border border-yellow-500/30">CACHE</span>
-                              ) : (
-                                  <CheckCircle2 size={18} className="text-blue-500" />
-                              )}
-                          </div>
-                          <p className="text-gray-400 max-w-md text-sm">
-                              {!isOnline ? 'Visualizando dados salvos localmente.' : 'Conta conectada e monitorada.'}
-                          </p>
-                      </div>
-                  </div>
-                  
-                  <div className="flex gap-6 relative z-10 mt-4 md:mt-0">
-                      <div className="text-center px-6 border-r border-gray-800">
-                          <p className="text-3xl font-bold text-white">{formatNumber(stats.followers)}</p>
-                          <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Seguidores</p>
-                      </div>
-                      <div className="text-center px-6 border-r border-gray-800">
-                          <p className="text-3xl font-bold text-white">{formatNumber(stats.following)}</p>
-                          <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Seguindo</p>
-                      </div>
-                      <div className="text-center px-6">
-                          <p className="text-3xl font-bold text-white">{stats.posts}</p>
-                          <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Posts</p>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Metrics Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-brand-surface border border-gray-800 p-5 rounded-xl">
-                      <div className="flex justify-between items-start mb-2">
-                          <p className="text-gray-400 text-xs font-bold uppercase">Engajamento</p>
-                          <Activity size={18} className="text-green-500" />
-                      </div>
-                      <h3 className="text-3xl font-bold text-white">{stats.engagement.toFixed(1)}%</h3>
-                      <span className="text-green-500 text-xs flex items-center gap-1">
-                          <TrendingUp size={12}/> Saudável
-                      </span>
-                  </div>
-                  <div className="bg-brand-surface border border-gray-800 p-5 rounded-xl">
-                      <div className="flex justify-between items-start mb-2">
-                          <p className="text-gray-400 text-xs font-bold uppercase">Média Likes</p>
-                          <Heart size={18} className="text-pink-500" />
-                      </div>
-                      <h3 className="text-3xl font-bold text-white">{formatNumber(stats.avgLikes)}</h3>
-                      <span className="text-gray-500 text-xs">por post</span>
-                  </div>
-                  <div className="bg-brand-surface border border-gray-800 p-5 rounded-xl">
-                      <div className="flex justify-between items-start mb-2">
-                          <p className="text-gray-400 text-xs font-bold uppercase">Média Comentários</p>
-                          <MessageCircle size={18} className="text-blue-500" />
-                      </div>
-                      <h3 className="text-3xl font-bold text-white">{formatNumber(stats.avgComments)}</h3>
-                      <span className="text-gray-500 text-xs">por post</span>
-                  </div>
-                  <div className="bg-brand-surface border border-gray-800 p-5 rounded-xl">
-                      <div className="flex justify-between items-start mb-2">
-                          <p className="text-gray-400 text-xs font-bold uppercase">Compartilhamentos</p>
-                          <Share2 size={18} className="text-purple-500" />
-                      </div>
-                      <h3 className="text-3xl font-bold text-white">{formatNumber(stats.avgShares)}</h3>
-                      <span className="text-green-500 text-xs flex items-center gap-1">
-                          <TrendingUp size={12}/> Alta
-                      </span>
-                  </div>
-              </div>
-
-              {/* Audience Insights */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {/* Gender Stats */}
-                 <div className="bg-brand-surface border border-gray-800 rounded-xl p-6">
-                    <h3 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
-                        <PieChart size={18} className="text-indigo-500" /> Insights de Gênero
-                    </h3>
-                    <div className="flex items-center justify-between mb-2">
-                         <span className="text-xs text-blue-400 font-bold">Homens {stats.audience.male}%</span>
-                         <span className="text-xs text-pink-400 font-bold">Mulheres {stats.audience.female}%</span>
-                    </div>
-                    <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden flex">
-                        <div style={{ width: `${stats.audience.male}%` }} className="bg-blue-500 h-full"></div>
-                        <div style={{ width: `${stats.audience.female}%` }} className="bg-pink-500 h-full"></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-4 text-center">
-                        Baseado em engajamento e seguidores.
-                    </p>
-                 </div>
-
-                 {/* Age Stats */}
-                 <div className="md:col-span-2 bg-brand-surface border border-gray-800 rounded-xl p-6">
-                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                        <Users size={18} className="text-indigo-500" /> Faixa Etária
-                    </h3>
-                    <div className="h-[150px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={stats.audience.ages}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={10} tickLine={false} axisLine={false} />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
-                                    cursor={{fill: '#374151', opacity: 0.2}}
-                                />
-                                <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Detailed Reach Analytics Section */}
-              <div className="bg-brand-surface border border-gray-800 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                       <BarChart2 size={20} className="text-indigo-500" /> Análise de Alcance e Visibilidade
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Reach & Impressions Cards */}
-                      <div className="space-y-4">
-                          <div className="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center gap-4">
-                              <div className="p-3 bg-blue-500/10 text-blue-500 rounded-lg">
-                                  <Users size={24} />
-                              </div>
-                              <div className="flex-1">
-                                  <p className="text-gray-500 text-xs font-bold uppercase">Alcance Estimado (30d)</p>
-                                  <h4 className="text-2xl font-bold text-white">{formatNumber(stats.avgReach)}</h4>
-                                  <div className="w-full bg-gray-800 h-1.5 rounded-full mt-2">
-                                      <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '65%' }}></div>
-                                  </div>
-                                  <p className="text-[10px] text-gray-500 mt-1">~30% da base de seguidores</p>
-                              </div>
-                          </div>
-                          
-                          <div className="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center gap-4">
-                              <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-lg">
-                                  <Eye size={24} />
-                              </div>
-                              <div className="flex-1">
-                                  <p className="text-gray-500 text-xs font-bold uppercase">Impressões Totais (30d)</p>
-                                  <h4 className="text-2xl font-bold text-white">{formatNumber(stats.avgImpressions)}</h4>
-                                  <div className="w-full bg-gray-800 h-1.5 rounded-full mt-2">
-                                      <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: '80%' }}></div>
-                                  </div>
-                                  <p className="text-[10px] text-gray-500 mt-1">Freq. Média: 1.4x por usuário</p>
-                              </div>
-                          </div>
-                      </div>
-
-                      {/* Interaction Breakdown */}
-                      <div className="bg-gray-900/50 border border-gray-800 p-5 rounded-xl">
-                          <h4 className="text-white text-sm font-bold mb-4">Eficiência de Conteúdo</h4>
-                          <div className="space-y-4">
-                              <div className="flex items-center justify-between text-sm">
-                                  <span className="text-gray-400">Likes por 1k Alcance</span>
-                                  <span className="text-white font-bold">{((stats.avgLikes / (stats.avgReach / 100)) || 0).toFixed(1)}</span>
-                              </div>
-                              <div className="w-full bg-gray-800 h-1.5 rounded-full">
-                                  <div className="bg-pink-500 h-1.5 rounded-full" style={{ width: '70%' }}></div>
-                              </div>
-
-                              <div className="flex items-center justify-between text-sm pt-2">
-                                  <span className="text-gray-400">Comentários por 1k Alcance</span>
-                                  <span className="text-white font-bold">{((stats.avgComments / (stats.avgReach / 100)) || 0).toFixed(1)}</span>
-                              </div>
-                              <div className="w-full bg-gray-800 h-1.5 rounded-full">
-                                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '25%' }}></div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-sm pt-2">
-                                  <span className="text-gray-400">Taxa de Conversão (Perfil)</span>
-                                  <span className="text-white font-bold">1.2%</span>
-                              </div>
-                              <div className="w-full bg-gray-800 h-1.5 rounded-full">
-                                  <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '15%' }}></div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Growth Chart */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 bg-brand-surface border border-gray-800 rounded-xl p-6">
-                      <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                          <TrendingUp size={18} className="text-indigo-500" /> Crescimento de Seguidores
-                      </h3>
-                      <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorFollowers" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor={platform === 'tiktok' ? '#00f2ea' : '#833AB4'} stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor={platform === 'tiktok' ? '#00f2ea' : '#833AB4'} stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
-                                    formatter={(value: number) => [formatNumber(value), 'Seguidores']}
-                                />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="followers" 
-                                    name="Seguidores"
-                                    stroke={platform === 'tiktok' ? '#00f2ea' : '#833AB4'} 
-                                    strokeWidth={3}
-                                    fillOpacity={1} 
-                                    fill="url(#colorFollowers)" 
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                  </div>
-
-                  <div className="bg-brand-surface border border-gray-800 rounded-xl p-6">
-                      <h3 className="text-lg font-bold text-white mb-6">Top Hashtags</h3>
-                      <div className="space-y-4">
-                          {[
-                              { tag: '#viral', count: formatNumber(stats.followers * 0.05), trend: 'up' },
-                              { tag: '#fyp', count: formatNumber(stats.followers * 0.02), trend: 'up' },
-                              { tag: `#${username.replace('@','')}`, count: formatNumber(stats.followers * 0.01), trend: 'up' },
-                              { tag: '#brasil', count: '3.5M', trend: 'up' },
-                              { tag: '#lifestyle', count: '2.1M', trend: 'neutral' },
-                          ].map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer">
-                                  <span className="text-gray-300 font-medium">{item.tag}</span>
-                                  <div className="flex items-center gap-3">
-                                      <span className="text-xs text-gray-500">{item.count}</span>
-                                      {item.trend === 'up' && <TrendingUp size={14} className="text-green-500" />}
-                                      {item.trend === 'down' && <TrendingUp size={14} className="text-red-500 rotate-180" />}
-                                  </div>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-              </div>
-              
-              {/* Scheduled Posts Queue */}
-              <div className="bg-brand-surface border border-gray-800 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                          <CalendarClock size={20} className="text-indigo-500" /> Fila de Publicação
-                      </h3>
-                      <span className="text-xs bg-gray-900 text-gray-400 px-3 py-1 rounded-full border border-gray-800">
-                          {scheduledPosts.length} agendados
-                      </span>
-                  </div>
-
-                  {scheduledPosts.length === 0 ? (
-                      <div className="text-center py-10 border-2 border-dashed border-gray-800 rounded-xl bg-gray-900/20">
-                          <CalendarClock size={40} className="text-gray-700 mx-auto mb-3" />
-                          <p className="text-gray-500 text-sm">Nenhum post agendado.</p>
-                          <Button variant="ghost" onClick={() => setIsScheduleModalOpen(true)} className="mt-2 text-indigo-400 hover:text-white">
-                              Agendar Primeiro Post
-                          </Button>
-                      </div>
-                  ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {scheduledPosts.map((post) => (
-                              <div key={post.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group hover:border-indigo-500/30 transition-all relative">
-                                  <div className="h-32 bg-gray-950 relative overflow-hidden flex items-center justify-center">
-                                      {post.media ? (
-                                          <img src={post.media} alt="Post media" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                      ) : (
-                                          <ImageIcon size={30} className="text-gray-700" />
-                                      )}
-                                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm p-1.5 rounded-lg text-white">
-                                          {post.platform === 'instagram' ? <Instagram size={14} /> : <TikTokIcon />}
-                                      </div>
-                                  </div>
-                                  <div className="p-4">
-                                      <div className="flex items-center gap-2 text-xs text-indigo-400 font-bold mb-2">
-                                          <Calendar size={12} /> {new Date(post.date).toLocaleDateString('pt-BR')} 
-                                          <span className="text-gray-600">|</span> 
-                                          <Clock size={12} /> {post.time}
-                                      </div>
-                                      <p className="text-sm text-gray-300 line-clamp-2 mb-3 h-10">
-                                          {post.caption || <span className="text-gray-600 italic">Sem legenda...</span>}
-                                      </p>
-                                      <div className="flex justify-between items-center pt-2 border-t border-gray-800">
-                                          <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Agendado</span>
-                                          <button 
-                                            onClick={() => handleDeletePost(post.id)}
-                                            className="text-gray-500 hover:text-red-500 transition-colors p-1"
-                                            title="Remover"
-                                          >
-                                              <Trash2 size={16} />
-                                          </button>
-                                      </div>
-                                  </div>
-                              </div>
-                          ))}
-                      </div>
-                  )}
-              </div>
-
-          </div>
-      )}
-
-      {/* Editor Modal */}
-      {isEditorOpen && editingStats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl relative h-[90vh] overflow-y-auto custom-scrollbar">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Edit size={20} className="text-indigo-500" /> Editor de Métricas
-                    </h2>
-                    <button 
-                        onClick={() => setIsEditorOpen(false)}
-                        className="text-gray-500 hover:text-white transition-colors"
-                    >
-                        <X size={24} />
-                    </button>
-                </div>
-
-                <div className="space-y-8">
-                    {/* Section 1: General Stats */}
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Dados do Perfil</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Seguidores</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.followers}
-                                    onChange={(e) => handleEditorStatChange('followers', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Seguindo</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.following}
-                                    onChange={(e) => handleEditorStatChange('following', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Posts</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.posts}
-                                    onChange={(e) => handleEditorStatChange('posts', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Section 2: Engagement & Averages */}
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Engajamento & Médias</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Engajamento (%)</label>
-                                <input 
-                                    type="number"
-                                    step="0.1" 
-                                    value={editingStats.engagement}
-                                    onChange={(e) => handleEditorStatChange('engagement', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Média Likes</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.avgLikes}
-                                    onChange={(e) => handleEditorStatChange('avgLikes', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Média Comentários</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.avgComments}
-                                    onChange={(e) => handleEditorStatChange('avgComments', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Compartilhamentos</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.avgShares}
-                                    onChange={(e) => handleEditorStatChange('avgShares', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* Section 3: Reach & Visibility */}
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Alcance & Visibilidade</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Alcance Estimado (Avg)</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.avgReach}
-                                    onChange={(e) => handleEditorStatChange('avgReach', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">Impressões Totais (Avg)</label>
-                                <input 
-                                    type="number" 
-                                    value={editingStats.avgImpressions}
-                                    onChange={(e) => handleEditorStatChange('avgImpressions', e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Section 4: Chart Data */}
-                    <div>
-                        <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Dados do Gráfico (Mensal)</h3>
-                             <button onClick={resetToSimulation} className="text-xs text-indigo-400 hover:text-white flex items-center gap-1">
-                                 <RotateCcw size={12} /> Restaurar Padrão
-                             </button>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                            {editingChartData.map((data, idx) => (
-                                <div key={idx} className="bg-gray-800/50 p-2 rounded-lg border border-gray-800 relative group">
-                                    <button 
-                                        onClick={() => handleEditorChartChange(idx, 'followers', '0')}
-                                        className="absolute -top-1 -right-1 bg-gray-700 hover:bg-red-500 hover:text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        title="Zerar Mês"
-                                    >
-                                        <X size={10} />
-                                    </button>
-                                    <p className="text-center font-bold text-indigo-400 mb-2">{data.name}</p>
-                                    
-                                    <div className="space-y-2">
-                                        <div>
-                                            <label className="text-[10px] text-gray-500 block">Seguidores</label>
-                                            <input 
-                                                type="number"
-                                                value={data.followers}
-                                                onChange={(e) => handleEditorChartChange(idx, 'followers', e.target.value)}
-                                                className="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
-                                                placeholder="Seguidores"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] text-gray-500 block">Engaj. (%)</label>
-                                            <input 
-                                                type="number"
-                                                step="0.1"
-                                                value={data.engagement || 0}
-                                                onChange={(e) => handleEditorChartChange(idx, 'engagement', e.target.value)}
-                                                className="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
-                                                placeholder="%"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Section 5: Audience Data */}
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Demografia da Audiência</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            
-                            {/* Gender Edit */}
-                            <div className="bg-gray-800/50 border border-gray-800 p-4 rounded-xl">
-                                <label className="block text-xs font-bold text-gray-400 mb-3">Distribuição de Gênero (%)</label>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <label className="text-xs text-pink-400 mb-1 block">Mulheres</label>
-                                        <input 
-                                            type="number" 
-                                            min="0" max="100"
-                                            value={editingStats.audience.female}
-                                            onChange={(e) => handleAudienceGenderChange(e.target.value)}
-                                            className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm focus:ring-1 focus:ring-pink-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="text-xs text-blue-400 mb-1 block">Homens (Auto)</label>
-                                        <div className="w-full bg-gray-900/50 border border-gray-800 rounded p-2 text-gray-400 text-sm cursor-not-allowed">
-                                            {editingStats.audience.male}%
-                                        </div>
-                                    </div>
-                                    <div className="flex items-end">
-                                        <button 
-                                            onClick={() => handleAudienceGenderChange('50')}
-                                            className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
-                                            title="Resetar 50/50"
-                                        >
-                                            <RefreshCcw size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="mt-3 w-full bg-gray-700 h-2 rounded-full overflow-hidden flex">
-                                    <div style={{ width: `${editingStats.audience.male}%` }} className="bg-blue-500 h-full transition-all"></div>
-                                    <div style={{ width: `${editingStats.audience.female}%` }} className="bg-pink-500 h-full transition-all"></div>
-                                </div>
-                            </div>
-
-                            {/* Age Edit */}
-                            <div className="bg-gray-800/50 border border-gray-800 p-4 rounded-xl">
-                                <div className="flex justify-between items-center mb-3">
-                                    <label className="block text-xs font-bold text-gray-400">Faixa Etária (Valores)</label>
-                                    <button 
-                                        onClick={() => {
-                                            const resetAges = editingStats.audience.ages.map(a => ({...a, value: 0}));
-                                            setEditingStats({...editingStats, audience: {...editingStats.audience, ages: resetAges}});
-                                        }}
-                                        className="text-[10px] text-red-400 hover:text-white flex items-center gap-1 bg-red-500/10 px-2 py-1 rounded"
-                                    >
-                                        <Trash2 size={10} /> Zerar Tudo
-                                    </button>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {editingStats.audience.ages.map((age, idx) => (
-                                        <div key={idx}>
-                                            <label className="text-[10px] text-gray-500 block mb-1">{age.name}</label>
-                                            <input 
-                                                type="number"
-                                                value={age.value}
-                                                onChange={(e) => handleAudienceAgeChange(idx, e.target.value)}
-                                                className="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-8 flex justify-end gap-3">
-                    <Button variant="ghost" onClick={() => setIsEditorOpen(false)}>
-                        Cancelar
-                    </Button>
-                    <Button onClick={saveCustomData} className="px-8">
-                        <Save size={16} className="mr-2" /> Salvar Edições
-                    </Button>
-                </div>
+      {/* --- MODAIS DE EDIÇÃO --- */}
+      {editingKpi && (
+        <div className='fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in'>
+          <GlassCard className='w-full max-w-sm p-6 bg-[#18181b] z-[101]'>
+            <div className='flex justify-between items-center mb-6'>
+              <h3 className='text-xl font-bold text-white'>Editar Dados</h3>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingKpi(null);
+                }}
+                className='relative z-20 cursor-pointer'
+              >
+                <X size={20} className='text-gray-500 hover:text-white' />
+              </button>
             </div>
-        </div>
-      )}
 
-      {/* Modal de Agendamento */}
-      {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
-                <button 
-                    onClick={() => setIsScheduleModalOpen(false)}
-                    className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+            {editingKpi === 'audience' && (
+              <div className='space-y-4'>
+                <div>
+                  <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
+                    Seguidores Atuais
+                  </label>
+                  <input
+                    type='number'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none z-20 relative'
+                    value={tempAudience.current}
+                    onChange={(e) =>
+                      setTempAudience({
+                        ...tempAudience,
+                        current: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className='text-[10px] uppercase font-bold text-emerald-500 mb-1 block'>
+                    Meta / Target
+                  </label>
+                  <input
+                    type='number'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none z-20 relative'
+                    value={tempAudience.target}
+                    onChange={(e) =>
+                      setTempAudience({
+                        ...tempAudience,
+                        target: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveAudience();
+                  }}
+                  className='w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-3 rounded-lg mt-2 z-20 relative cursor-pointer'
                 >
-                    <LogOut size={20} className="rotate-45" />
+                  Salvar
                 </button>
-                <h2 className="text-xl font-bold text-white mb-6">Agendar Novo Post</h2>
-                
-                <div className="space-y-4">
-                    <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`border-2 border-dashed border-gray-700 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 hover:text-indigo-500 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all cursor-pointer relative overflow-hidden ${postMedia ? 'border-indigo-500/50' : ''}`}
-                    >
-                        {postMedia ? (
-                            <div className="relative w-full h-40">
-                                <img src={postMedia} alt="Preview" className="w-full h-full object-cover rounded-lg" />
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                    <span className="text-white text-xs font-bold">Trocar Imagem</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <ImageIcon size={32} className="mb-2" />
-                                <span className="text-sm">Arraste a foto/vídeo ou clique para upload</span>
-                            </>
-                        )}
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            className="hidden" 
-                            accept="image/*"
-                            onChange={handlePostMediaUpload}
-                        />
-                    </div>
+              </div>
+            )}
 
-                    <textarea 
-                        className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
-                        placeholder="Escreva sua legenda..."
-                        value={postCaption}
-                        onChange={(e) => setPostCaption(e.target.value)}
-                    ></textarea>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <input 
-                            type="date" 
-                            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                            value={postDate}
-                            onChange={(e) => setPostDate(e.target.value)}
-                        />
-                        <input 
-                            type="time" 
-                            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                            value={postTime}
-                            onChange={(e) => setPostTime(e.target.value)}
-                        />
-                    </div>
-
-                    <Button 
-                        className="w-full py-3" 
-                        onClick={handleSchedulePost}
-                        disabled={!postDate || !postTime}
-                    >
-                        Confirmar Agendamento
-                    </Button>
+            {editingKpi === 'financial' && (
+              <div className='space-y-4'>
+                <div>
+                  <label className='text-[10px] uppercase font-bold text-emerald-500 mb-1 block'>
+                    Meta de ROAS Global
+                  </label>
+                  <input
+                    type='number'
+                    step='0.1'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none z-20 relative'
+                    value={tempFinance.targetRoas}
+                    onChange={(e) =>
+                      setTempFinance({
+                        ...tempFinance,
+                        targetRoas: e.target.value,
+                      })
+                    }
+                  />
                 </div>
-            </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveFinancialTarget();
+                  }}
+                  className='w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-lg mt-2 z-20 relative cursor-pointer'
+                >
+                  Salvar Meta
+                </button>
+              </div>
+            )}
+
+            {editingKpi === 'engagement' && (
+              <div className='space-y-4'>
+                <p className='text-xs text-gray-400 mb-2'>
+                  Dados do último post para cálculo:
+                </p>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
+                      Likes
+                    </label>
+                    <input
+                      type='number'
+                      className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
+                      value={tempEngagement.likes}
+                      onChange={(e) =>
+                        setTempEngagement({
+                          ...tempEngagement,
+                          likes: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
+                      Comentários
+                    </label>
+                    <input
+                      type='number'
+                      className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
+                      value={tempEngagement.comments}
+                      onChange={(e) =>
+                        setTempEngagement({
+                          ...tempEngagement,
+                          comments: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className='text-[10px] uppercase font-bold text-pink-500 mb-1 block'>
+                    Meta de Engajamento (%)
+                  </label>
+                  <input
+                    type='number'
+                    step='0.1'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-pink-500 outline-none z-20 relative'
+                    value={tempEngagement.target}
+                    onChange={(e) =>
+                      setTempEngagement({
+                        ...tempEngagement,
+                        target: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveEngagement();
+                  }}
+                  className='w-full bg-pink-600 hover:bg-pink-700 text-white font-bold p-3 rounded-lg mt-2 z-20 relative cursor-pointer'
+                >
+                  Salvar
+                </button>
+              </div>
+            )}
+          </GlassCard>
         </div>
       )}
-
     </div>
   );
 };
