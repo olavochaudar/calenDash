@@ -10,8 +10,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
 } from 'recharts';
 import {
   TrendingUp,
@@ -20,9 +18,6 @@ import {
   Loader2,
   Layers,
   Target,
-  Calculator,
-  Lightbulb,
-  ShieldAlert,
   Rocket,
   Trash2,
   Plus,
@@ -31,15 +26,12 @@ import {
   ClipboardList,
   Swords,
   DollarSign,
-  Megaphone,
-  Trophy,
   Zap,
   ArrowUpRight,
   X,
   Edit3,
   User,
   Download,
-  Filter,
   Instagram,
   Facebook,
   Search,
@@ -48,37 +40,18 @@ import {
   Globe,
   Youtube,
   Wallet,
-  CreditCard,
 } from 'lucide-react';
 
 // --- ESTILOS GLOBAIS ---
 const GlobalStyles = () => (
   <style>{`
-        /* Remove setas do input number */
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
-        
-        /* Reset padrão */
         body, html { height: 100%; width: 100%; margin: 0; padding: 0; overflow-x: hidden; background-color: #050507; }
-        
-        /* SCROLLBAR DISCRETA (Horizontal e Vertical) */
-        .thin-scrollbar::-webkit-scrollbar {
-            width: 6px;  /* Largura para vertical */
-            height: 6px; /* Altura para horizontal */
-        }
-        .thin-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.02); /* Fundo sutil */
-            border-radius: 4px;
-        }
-        .thin-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15); /* Cor da barra */
-            border-radius: 4px;
-        }
-        .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3); /* Cor ao passar o mouse */
-        }
-
-        /* Animações */
+        .thin-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .thin-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 4px; }
+        .thin-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+        .thin-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
     `}</style>
@@ -103,7 +76,6 @@ interface Campaign {
   clicks: number;
   status: 'Ativa' | 'Pausada';
 }
-
 interface Expense {
   id: string;
   description: string;
@@ -111,7 +83,6 @@ interface Expense {
   amount: number;
   date: string;
 }
-
 interface ContentPost {
   id: string;
   caption: string;
@@ -165,8 +136,23 @@ interface MarketingProfile {
   lastComments: number;
 }
 
-// --- COMPONENTES UI ---
+// --- FUNÇÕES AUXILIARES ---
+const parseValue = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  let clean = value.toString().replace(/[^\d,.-]/g, '');
+  if (clean.includes(',')) clean = clean.replace(/\./g, '').replace(',', '.');
+  return parseFloat(clean) || 0;
+};
 
+const formatNumber = (num: number) =>
+  new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(num);
+const formatCurrency = (val: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    val
+  );
+
+// --- COMPONENTES UI ---
 const GlassCard = ({
   children,
   className = '',
@@ -199,7 +185,7 @@ const ProgressBar = ({
 }) => {
   const percentage = Math.min(100, Math.max(0, (current / (max || 1)) * 100));
   return (
-    <div className='w-full bg-gray-800 h-1.5 rounded-full mt-3 overflow-hidden'>
+    <div className='w-full bg-gray-800 h-1.5 rounded-full mt-3 overflow-hidden relative z-0'>
       <div
         className={`h-full rounded-full transition-all duration-1000 ${color}`}
         style={{ width: `${percentage}%` }}
@@ -210,10 +196,11 @@ const ProgressBar = ({
 
 const NavButton = ({ id, activeTab, setActiveTab, icon: Icon, label }: any) => (
   <button
+    type='button'
     onClick={() => setActiveTab(id)}
-    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 cursor-pointer select-none ${
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 cursor-pointer select-none relative z-20 ${
       activeTab === id
-        ? 'bg-white text-black shadow-lg shadow-white/10 scale-105 z-20'
+        ? 'bg-white text-black shadow-lg shadow-white/10 scale-105'
         : 'text-gray-400 hover:text-white hover:bg-white/5'
     }`}
   >
@@ -268,14 +255,6 @@ const PlatformIcon = ({ platform }: { platform: string }) => {
   }
 };
 
-// --- UTILITÁRIOS ---
-const formatNumber = (num: number) =>
-  new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(num);
-const formatCurrency = (val: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-    val
-  );
-
 export const MarketingDashboard: React.FC = () => {
   const [profile, setProfile] = useState<MarketingProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
@@ -286,18 +265,23 @@ export const MarketingDashboard: React.FC = () => {
     'Todos' | 'Topo' | 'Meio' | 'Fundo'
   >('Todos');
 
-  // Modais e Inputs
+  // --- ESTADOS DE EDIÇÃO ---
   const [editingKpi, setEditingKpi] = useState<
     'audience' | 'financial' | 'engagement' | null
   >(null);
   const [tempAudience, setTempAudience] = useState({ current: '', target: '' });
-  const [tempFinance, setTempFinance] = useState({ targetRoas: '' });
+  const [tempFinance, setTempFinance] = useState({
+    spend: '',
+    revenue: '',
+    targetRoas: '',
+  });
   const [tempEngagement, setTempEngagement] = useState({
     likes: '',
     comments: '',
     target: '',
   });
 
+  // Inputs
   const [brandInput, setBrandInput] = useState('');
   const [taskInput, setTaskInput] = useState('');
   const [contentInput, setContentInput] = useState({
@@ -310,26 +294,19 @@ export const MarketingDashboard: React.FC = () => {
     strength: '',
     weakness: '',
   });
-
-  // Inputs Financeiros
   const [campaignInput, setCampaignInput] = useState<{
     name: string;
     platform: PlatformType;
     spend: string;
     revenue: string;
-  }>({
-    name: '',
-    platform: 'Meta Ads',
-    spend: '',
-    revenue: '',
-  });
+  }>({ name: '', platform: 'Meta Ads', spend: '', revenue: '' });
   const [expenseInput, setExpenseInput] = useState({
     description: '',
     amount: '',
     category: 'Ferramentas',
   });
 
-  const STORAGE_KEY = 'marketing_os_v9_scroll';
+  const STORAGE_KEY = 'marketing_os_v13_full';
 
   // --- AUTO-SAVE & LOAD ---
   useEffect(() => {
@@ -388,48 +365,55 @@ export const MarketingDashboard: React.FC = () => {
     }, 1000);
   };
 
-  // Funções de Edição KPI
+  // KPI SAVERS
   const saveAudience = () => {
     if (!profile) return;
     const cf =
       profile.history.length > 0
         ? profile.history[profile.history.length - 1].followers
         : 0;
-    const nh = [
-      ...profile.history,
-      {
+    const val = parseValue(tempAudience.current);
+    const target = parseValue(tempAudience.target);
+    const nh = [...profile.history];
+    if (nh.length > 0)
+      nh[nh.length - 1] = {
+        ...nh[nh.length - 1],
+        followers: val > 0 ? val : cf,
+      };
+    else
+      nh.push({
         date: new Date().toLocaleDateString('pt-BR', {
           day: '2-digit',
           month: 'short',
         }),
-        followers: parseInt(tempAudience.current) || cf,
-        engagement:
-          profile.history.length > 0
-            ? profile.history[profile.history.length - 1].engagement
-            : 0,
-      },
-    ];
+        followers: val,
+        engagement: 0,
+      });
     setProfile({
       ...profile,
       history: nh,
       targets: {
         ...profile.targets,
-        followers: parseInt(tempAudience.target) || profile.targets.followers,
+        followers: target || profile.targets.followers,
       },
     });
     setEditingKpi(null);
   };
+
   const saveEngagement = () => {
     if (!profile) return;
-    const l = parseInt(tempEngagement.likes) || profile.lastLikes;
-    const c = parseInt(tempEngagement.comments) || profile.lastComments;
-    const f =
+    const l = parseValue(tempEngagement.likes);
+    const c = parseValue(tempEngagement.comments);
+    const targetMeta = parseValue(tempEngagement.target);
+    let f =
       profile.history.length > 0
         ? profile.history[profile.history.length - 1].followers
-        : 1;
-    const r = f > 0 ? ((l + c) / f) * 100 : 0;
+        : 0;
+    if (f === 0) f = 1;
+    const r = ((l + c) / f) * 100;
     const nh = [...profile.history];
-    if (nh.length > 0) nh[nh.length - 1].engagement = r;
+    if (nh.length > 0)
+      nh[nh.length - 1] = { ...nh[nh.length - 1], engagement: r };
     setProfile({
       ...profile,
       history: nh,
@@ -437,20 +421,39 @@ export const MarketingDashboard: React.FC = () => {
       lastComments: c,
       targets: {
         ...profile.targets,
-        engagement:
-          parseFloat(tempEngagement.target) || profile.targets.engagement,
+        engagement: targetMeta || profile.targets.engagement,
       },
     });
     setEditingKpi(null);
   };
-  const saveFinancialTarget = () => {
+
+  const saveFinancialData = () => {
     if (!profile) return;
-    const target = parseFloat(tempFinance.targetRoas) || profile.targets.roas;
-    setProfile({ ...profile, targets: { ...profile.targets, roas: target } });
+    const target = parseValue(tempFinance.targetRoas);
+    const spend = parseValue(tempFinance.spend);
+    const revenue = parseValue(tempFinance.revenue);
+    let newCampaigns = [...profile.campaigns];
+    if (spend > 0 || revenue > 0) {
+      newCampaigns = newCampaigns.filter((c) => c.id !== 'manual-entry');
+      newCampaigns.push({
+        id: 'manual-entry',
+        name: 'Resumo Manual / Outros',
+        platform: 'Outros',
+        spend: spend,
+        revenue: revenue,
+        clicks: 0,
+        status: 'Ativa',
+      });
+    }
+    setProfile({
+      ...profile,
+      campaigns: newCampaigns,
+      targets: { ...profile.targets, roas: target || profile.targets.roas },
+    });
     setEditingKpi(null);
   };
 
-  // CRUD
+  // CRUD GERAL
   const addTask = () => {
     if (profile && taskInput) {
       setProfile({
@@ -529,15 +532,14 @@ export const MarketingDashboard: React.FC = () => {
       ...profile,
       strategy: { ...profile.strategy, [key]: val } as any,
     });
-
   const addCampaign = () => {
     if (!profile || !campaignInput.name) return;
     const newCamp: Campaign = {
       id: Date.now().toString(),
       name: campaignInput.name,
       platform: campaignInput.platform,
-      spend: parseFloat(campaignInput.spend) || 0,
-      revenue: parseFloat(campaignInput.revenue) || 0,
+      spend: parseValue(campaignInput.spend),
+      revenue: parseValue(campaignInput.revenue),
       clicks: 0,
       status: 'Ativa',
     };
@@ -551,13 +553,12 @@ export const MarketingDashboard: React.FC = () => {
         campaigns: profile.campaigns.filter((c) => c.id !== id),
       });
   };
-
   const addExpense = () => {
     if (!profile || !expenseInput.description) return;
     const newExp: Expense = {
       id: Date.now().toString(),
       description: expenseInput.description,
-      amount: parseFloat(expenseInput.amount) || 0,
+      amount: parseValue(expenseInput.amount),
       category: expenseInput.category as any,
       date: new Date().toLocaleDateString('pt-BR'),
     };
@@ -571,10 +572,8 @@ export const MarketingDashboard: React.FC = () => {
         expenses: profile.expenses.filter((e) => e.id !== id),
       });
   };
-
-  const handleExport = () => {
+  const handleExport = () =>
     alert('Simulação: Relatório PDF gerado com sucesso.');
-  };
   const handleReset = () => {
     if (confirm('Tem certeza? Isso apagará todos os dados.')) {
       localStorage.removeItem(STORAGE_KEY);
@@ -589,8 +588,6 @@ export const MarketingDashboard: React.FC = () => {
         <GlobalStyles />
         <div className='fixed inset-0 z-0 pointer-events-none bg-[#050507]'>
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-          <div className='absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[128px]'></div>
-          <div className='absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[128px]'></div>
         </div>
         <GlassCard className='p-10 w-full max-w-md text-center relative z-10 border-white/10'>
           <div className='w-20 h-20 bg-white text-black rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(255,255,255,0.3)] rotate-3'>
@@ -622,7 +619,7 @@ export const MarketingDashboard: React.FC = () => {
     );
   }
 
-  // CÁLCULOS GERAIS
+  // CÁLCULOS
   const currentStats =
     profile.history.length > 0
       ? profile.history[profile.history.length - 1]
@@ -632,13 +629,10 @@ export const MarketingDashboard: React.FC = () => {
   const totalExpenses = profile.expenses.reduce((acc, e) => acc + e.amount, 0);
   const netProfit = totalRevenue - (totalAdSpend + totalExpenses);
   const globalROAS = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
-
-  // Pie Chart Data (Media Mix)
   const platformSpend = profile.campaigns.reduce((acc, c) => {
     acc[c.platform] = (acc[c.platform] || 0) + c.spend;
     return acc;
   }, {} as Record<string, number>);
-
   const pieData = Object.keys(platformSpend).map((key) => ({
     name: key,
     value: platformSpend[key],
@@ -646,34 +640,23 @@ export const MarketingDashboard: React.FC = () => {
       ? '#3b82f6'
       : key.includes('Google')
       ? '#eab308'
-      : key.includes('TikTok')
-      ? '#ec4899'
-      : key.includes('YouTube')
-      ? '#ef4444'
       : '#6b7280',
   }));
 
   return (
     <div className='min-h-screen bg-[#050507] text-gray-100 font-sans pb-20 overflow-x-hidden selection:bg-indigo-500/30 relative'>
       <GlobalStyles />
-
-      {/* Background Fixed */}
       <div className='fixed inset-0 z-0 pointer-events-none bg-[#050507]'>
         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-        <div className='absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[500px] bg-indigo-900/10 rounded-full blur-[120px]'></div>
-        <div className='absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[120px]'></div>
       </div>
 
-      {/* Navbar */}
       <div className='fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-6xl px-4'>
         <div className='bg-[#09090b]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex flex-col md:flex-row justify-between items-center shadow-2xl ring-1 ring-white/5 gap-4 md:gap-0'>
           <div className='flex items-center gap-3 px-4'>
             <div className='w-8 h-8 rounded-lg bg-white flex items-center justify-center font-bold text-black shadow-lg'>
               {profile.brandName.charAt(0)}
             </div>
-            <div className='flex flex-col'>
-              <span className='font-bold text-sm'>{profile.brandName}</span>
-            </div>
+            <span className='font-bold text-sm'>{profile.brandName}</span>
           </div>
           <div className='flex gap-2 overflow-x-auto w-full md:w-auto justify-start md:justify-center thin-scrollbar px-2'>
             <NavButton
@@ -708,15 +691,13 @@ export const MarketingDashboard: React.FC = () => {
           <div className='flex items-center gap-2 px-2'>
             <button
               onClick={handleExport}
-              className='p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors relative z-20 cursor-pointer'
-              title='Exportar'
+              className='p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg z-20 cursor-pointer'
             >
               <Download size={18} />
             </button>
             <button
               onClick={handleReset}
-              className='p-2.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg transition-colors relative z-20 cursor-pointer'
-              title='Sair'
+              className='p-2.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg z-20 cursor-pointer'
             >
               <LogOut size={18} />
             </button>
@@ -728,30 +709,8 @@ export const MarketingDashboard: React.FC = () => {
         {/* === VISÃO GERAL === */}
         {activeTab === 'overview' && (
           <div className='space-y-8 animate-fade-in'>
-            <div className='relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-r from-[#1a1a2e] to-[#0f0f16] p-8 shadow-2xl'>
-              <div className='relative z-10 flex items-center justify-between'>
-                <div className='flex items-start gap-4'>
-                  <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 shadow-lg shadow-purple-500/10'>
-                    <Zap size={24} />
-                  </div>
-                  <div>
-                    <h3 className='text-xl font-bold text-white'>
-                      IA Autônoma em Breve
-                    </h3>
-                    <p className='mt-1 max-w-lg text-sm text-gray-400'>
-                      O módulo de conexão via API está em desenvolvimento. Por
-                      enquanto,{' '}
-                      <span className='text-white font-bold'>
-                        clique nos cards abaixo
-                      </span>{' '}
-                      para gerenciar seus dados manualmente.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
+              {/* CARD AUDIÊNCIA */}
               <GlassCard
                 onClick={() => {
                   setTempAudience({
@@ -774,23 +733,20 @@ export const MarketingDashboard: React.FC = () => {
                 <h3 className='text-3xl font-bold text-white'>
                   {formatNumber(currentStats.followers)}
                 </h3>
-                <div className='mt-4'>
-                  <div className='flex justify-between text-[10px] text-gray-400 mb-1'>
-                    <span>Progresso</span>
-                    <span>Meta: {formatNumber(profile.targets.followers)}</span>
-                  </div>
-                  <ProgressBar
-                    current={currentStats.followers}
-                    max={profile.targets.followers}
-                    color='bg-indigo-500'
-                  />
-                </div>
+                <ProgressBar
+                  current={currentStats.followers}
+                  max={profile.targets.followers}
+                  color='bg-indigo-500'
+                />
               </GlassCard>
 
+              {/* CARD ROAS */}
               <GlassCard
                 onClick={() => {
                   setTempFinance({
                     targetRoas: profile.targets.roas.toString(),
+                    spend: totalAdSpend.toString(),
+                    revenue: totalRevenue.toString(),
                   });
                   setEditingKpi('financial');
                 }}
@@ -814,19 +770,14 @@ export const MarketingDashboard: React.FC = () => {
                 >
                   {globalROAS.toFixed(2)}x
                 </h3>
-                <div className='mt-4'>
-                  <div className='flex justify-between text-[10px] text-gray-400 mb-1'>
-                    <span>Eficiência</span>
-                    <span>Meta: {profile.targets.roas}x</span>
-                  </div>
-                  <ProgressBar
-                    current={globalROAS}
-                    max={profile.targets.roas}
-                    color='bg-emerald-500'
-                  />
-                </div>
+                <ProgressBar
+                  current={globalROAS}
+                  max={profile.targets.roas}
+                  color='bg-emerald-500'
+                />
               </GlassCard>
 
+              {/* CARD ENGAJAMENTO */}
               <GlassCard
                 onClick={() => {
                   setTempEngagement({
@@ -850,19 +801,14 @@ export const MarketingDashboard: React.FC = () => {
                 <h3 className='text-3xl font-bold text-white'>
                   {currentStats.engagement.toFixed(2)}%
                 </h3>
-                <div className='mt-4'>
-                  <div className='flex justify-between text-[10px] text-gray-400 mb-1'>
-                    <span>Qualidade</span>
-                    <span>Meta: {profile.targets.engagement}%</span>
-                  </div>
-                  <ProgressBar
-                    current={currentStats.engagement}
-                    max={profile.targets.engagement}
-                    color='bg-pink-500'
-                  />
-                </div>
+                <ProgressBar
+                  current={currentStats.engagement}
+                  max={profile.targets.engagement}
+                  color='bg-pink-500'
+                />
               </GlassCard>
 
+              {/* CARD BACKLOG */}
               <GlassCard className='p-6 relative group'>
                 <div className='flex justify-between items-start mb-2'>
                   <span className='text-xs font-bold text-gray-500 flex items-center gap-2'>
@@ -893,6 +839,7 @@ export const MarketingDashboard: React.FC = () => {
               </GlassCard>
             </div>
 
+            {/* AREA DO GRÁFICO E TAREFAS */}
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
               <GlassCard className='p-6 min-h-[400px]'>
                 <div className='flex justify-between items-center mb-8'>
@@ -975,7 +922,7 @@ export const MarketingDashboard: React.FC = () => {
                     >
                       <button
                         onClick={() => toggleTask(task.id)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center relative z-20 cursor-pointer ${
                           task.done
                             ? 'bg-emerald-500 border-emerald-500'
                             : 'border-gray-600'
@@ -996,7 +943,7 @@ export const MarketingDashboard: React.FC = () => {
                       </span>
                       <button
                         onClick={() => deleteTask(task.id)}
-                        className='text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer'
+                        className='text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-20 relative cursor-pointer'
                       >
                         <Trash2 size={16} />
                       </button>
@@ -1010,10 +957,179 @@ export const MarketingDashboard: React.FC = () => {
                 </div>
               </GlassCard>
             </div>
+
+            {/* BANNER IA */}
+            <div className='relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-r from-[#1a1a2e] to-[#0f0f16] p-8 shadow-2xl'>
+              <div className='relative z-10 flex items-center justify-between'>
+                <div className='flex items-start gap-4'>
+                  <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 shadow-lg shadow-purple-500/10'>
+                    <Zap size={24} />
+                  </div>
+                  <div>
+                    <h3 className='text-xl font-bold text-white'>
+                      IA Autônoma em Breve
+                    </h3>
+                    <p className='mt-1 max-w-lg text-sm text-gray-400'>
+                      O módulo de conexão via API está em desenvolvimento.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* === ABA: FINANCEIRO (REFORMULADA) === */}
+        {/* === ABA: ESTRATÉGIA === */}
+        {activeTab === 'strategy' && (
+          <div className='space-y-6 animate-fade-in'>
+            <GlassCard className='p-6'>
+              <div className='flex items-center gap-3 mb-6'>
+                <div className='p-2 bg-indigo-500/10 rounded-lg text-indigo-500'>
+                  <User size={20} />
+                </div>
+                <h2 className='text-xl font-bold text-white'>
+                  Persona & Identidade
+                </h2>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                <div>
+                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
+                    Perfil
+                  </label>
+                  <input
+                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm focus:border-indigo-500 outline-none z-20 relative'
+                    placeholder='Ex: João, 30 anos...'
+                    value={profile.strategy.personaName}
+                    onChange={(e) =>
+                      updateStrategy('personaName', e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
+                    Dores
+                  </label>
+                  <textarea
+                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm h-24 resize-none focus:border-red-500 outline-none z-20 relative'
+                    placeholder='O que tira o sono dele?'
+                    value={profile.strategy.personaPain}
+                    onChange={(e) =>
+                      updateStrategy('personaPain', e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
+                    Desejos
+                  </label>
+                  <textarea
+                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm h-24 resize-none focus:border-green-500 outline-none z-20 relative'
+                    placeholder='Qual o sonho dele?'
+                    value={profile.strategy.personaDesire}
+                    onChange={(e) =>
+                      updateStrategy('personaDesire', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </GlassCard>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <GlassCard className='p-6 border-l-4 border-l-emerald-500'>
+                <h3 className='font-bold text-white mb-4 flex items-center gap-2'>
+                  <ArrowUpRight size={18} className='text-emerald-500' /> Forças
+                  & Oportunidades
+                </h3>
+                <textarea
+                  className='w-full bg-black/20 border border-gray-700/50 rounded-xl p-3 text-sm text-gray-300 h-32 resize-none outline-none focus:bg-black/40 z-20 relative'
+                  placeholder='Liste seus pontos fortes...'
+                  value={profile.strategy.swotStrengths}
+                  onChange={(e) =>
+                    updateStrategy('swotStrengths', e.target.value)
+                  }
+                />
+              </GlassCard>
+              <GlassCard className='p-6 border-l-4 border-l-red-500'>
+                <h3 className='font-bold text-white mb-4 flex items-center gap-2'>
+                  <X size={18} className='text-red-500' /> Fraquezas & Ameaças
+                </h3>
+                <textarea
+                  className='w-full bg-black/20 border border-gray-700/50 rounded-xl p-3 text-sm text-gray-300 h-32 resize-none outline-none focus:bg-black/40 z-20 relative'
+                  placeholder='Onde o concorrente ganha?'
+                  value={profile.strategy.swotWeaknesses}
+                  onChange={(e) =>
+                    updateStrategy('swotWeaknesses', e.target.value)
+                  }
+                />
+              </GlassCard>
+            </div>
+            <GlassCard className='p-6'>
+              <h3 className='font-bold mb-6 flex items-center gap-2 text-white'>
+                <Swords size={18} className='text-orange-500' /> Concorrentes
+              </h3>
+              <div className='grid grid-cols-1 sm:grid-cols-4 gap-2 mb-6'>
+                <input
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                  placeholder='Nome'
+                  value={compInput.name}
+                  onChange={(e) =>
+                    setCompInput({ ...compInput, name: e.target.value })
+                  }
+                />
+                <input
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                  placeholder='Ponto Forte'
+                  value={compInput.strength}
+                  onChange={(e) =>
+                    setCompInput({ ...compInput, strength: e.target.value })
+                  }
+                />
+                <input
+                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                  placeholder='Ponto Fraco'
+                  value={compInput.weakness}
+                  onChange={(e) =>
+                    setCompInput({ ...compInput, weakness: e.target.value })
+                  }
+                />
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addCompetitor();
+                  }}
+                  className='bg-orange-600 hover:bg-orange-700 text-white rounded-lg flex items-center justify-center z-20 relative cursor-pointer'
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {profile.competitors.map((comp) => (
+                  <div
+                    key={comp.id}
+                    className='bg-gray-800/30 p-4 rounded-xl border border-gray-700/50 relative hover:border-gray-500 transition-colors'
+                  >
+                    <h4 className='font-bold text-white mb-2'>{comp.name}</h4>
+                    <p className='text-xs text-green-400 mb-1'>
+                      + {comp.strength}
+                    </p>
+                    <p className='text-xs text-red-400'>- {comp.weakness}</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCompetitor(comp.id);
+                      }}
+                      className='absolute top-3 right-3 text-gray-600 hover:text-red-500 z-20 relative cursor-pointer'
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {/* === ABA: FINANCEIRO === */}
         {activeTab === 'finance' && (
           <div className='space-y-6 animate-fade-in'>
             <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
@@ -1053,52 +1169,18 @@ export const MarketingDashboard: React.FC = () => {
                 </p>
               </GlassCard>
             </div>
-
             <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
               <div className='lg:col-span-2 space-y-6'>
                 <GlassCard className='p-6'>
-                  <h3 className='font-bold mb-2 text-white flex items-center gap-2'>
+                  <h3 className='font-bold mb-4 text-white flex items-center gap-2'>
                     <Target size={18} className='text-indigo-500' /> Performance
                     de Mídia
                   </h3>
-                  <p className='text-gray-500 text-xs mb-6 uppercase tracking-wider'>
-                    Novo Registro de Campanha
-                  </p>
                   <div className='space-y-4 mb-6 bg-white/5 p-4 rounded-xl border border-white/5'>
-                    <div className='flex gap-2 overflow-x-auto pb-2 thin-scrollbar'>
-                      {[
-                        'Meta Ads',
-                        'Instagram Ads',
-                        'TikTok Ads',
-                        'Google Ads',
-                        'YouTube Ads',
-                        'LinkedIn',
-                        'Outros',
-                      ].map((p) => (
-                        <button
-                          key={p}
-                          onClick={() =>
-                            setCampaignInput({
-                              ...campaignInput,
-                              platform: p as any,
-                            })
-                          }
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
-                            campaignInput.platform === p
-                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg'
-                              : 'bg-black/20 border-gray-700 text-gray-400 hover:bg-black/40'
-                          }`}
-                        >
-                          <span className='flex items-center gap-1'>
-                            <PlatformIcon platform={p} /> {p.split(' ')[0]}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
                     <div className='grid grid-cols-1 md:grid-cols-4 gap-3'>
                       <input
-                        className='md:col-span-2 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
-                        placeholder='Nome da Campanha (Ex: Natal)'
+                        className='md:col-span-2 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
+                        placeholder='Nome da Campanha'
                         value={campaignInput.name}
                         onChange={(e) =>
                           setCampaignInput({
@@ -1108,8 +1190,8 @@ export const MarketingDashboard: React.FC = () => {
                         }
                       />
                       <input
-                        type='number'
-                        className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                        type='text'
+                        className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
                         placeholder='Gasto (R$)'
                         value={campaignInput.spend}
                         onChange={(e) =>
@@ -1121,8 +1203,8 @@ export const MarketingDashboard: React.FC = () => {
                       />
                       <div className='flex gap-2'>
                         <input
-                          type='number'
-                          className='w-full bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                          type='text'
+                          className='w-full bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
                           placeholder='Receita (R$)'
                           value={campaignInput.revenue}
                           onChange={(e) =>
@@ -1133,8 +1215,9 @@ export const MarketingDashboard: React.FC = () => {
                           }
                         />
                         <button
+                          type='button'
                           onClick={addCampaign}
-                          className='bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 flex items-center justify-center'
+                          className='bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 flex items-center justify-center z-20 relative cursor-pointer'
                         >
                           <Plus size={18} />
                         </button>
@@ -1145,7 +1228,7 @@ export const MarketingDashboard: React.FC = () => {
                     <table className='w-full text-left text-sm'>
                       <thead className='text-gray-500 text-xs uppercase sticky top-0 bg-[#13131a] z-10'>
                         <tr>
-                          <th className='pb-3'>Plataforma</th>
+                          <th className='pb-3'>Campanha</th>
                           <th className='pb-3'>Gasto</th>
                           <th className='pb-3'>ROAS</th>
                           <th className='pb-3 text-right'>#</th>
@@ -1157,10 +1240,7 @@ export const MarketingDashboard: React.FC = () => {
                             camp.spend > 0 ? camp.revenue / camp.spend : 0;
                           return (
                             <tr key={camp.id} className='hover:bg-white/5'>
-                              <td className='py-3 flex items-center gap-2 text-white'>
-                                <PlatformIcon platform={camp.platform} />{' '}
-                                {camp.name}
-                              </td>
+                              <td className='py-3 text-white'>{camp.name}</td>
                               <td className='py-3 text-gray-400'>
                                 {formatCurrency(camp.spend)}
                               </td>
@@ -1178,7 +1258,7 @@ export const MarketingDashboard: React.FC = () => {
                               <td className='py-3 text-right'>
                                 <button
                                   onClick={() => deleteCampaign(camp.id)}
-                                  className='text-gray-600 hover:text-red-500 cursor-pointer'
+                                  className='text-gray-600 hover:text-red-500 cursor-pointer z-20 relative'
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -1191,7 +1271,6 @@ export const MarketingDashboard: React.FC = () => {
                   </div>
                 </GlassCard>
               </div>
-
               <div className='space-y-6'>
                 <GlassCard className='p-6 h-[300px] flex flex-col'>
                   <h3 className='font-bold mb-2 text-white text-sm'>
@@ -1233,7 +1312,6 @@ export const MarketingDashboard: React.FC = () => {
                     )}
                   </div>
                 </GlassCard>
-
                 <GlassCard className='p-6'>
                   <h3 className='font-bold mb-4 text-white flex items-center gap-2'>
                     <Wallet size={18} className='text-pink-500' /> Despesas
@@ -1241,7 +1319,7 @@ export const MarketingDashboard: React.FC = () => {
                   </h3>
                   <div className='flex gap-2 mb-4'>
                     <input
-                      className='flex-1 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                      className='flex-1 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
                       placeholder='Ex: Software'
                       value={expenseInput.description}
                       onChange={(e) =>
@@ -1252,8 +1330,8 @@ export const MarketingDashboard: React.FC = () => {
                       }
                     />
                     <input
-                      type='number'
-                      className='w-24 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none'
+                      type='text'
+                      className='w-24 bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
                       placeholder='R$'
                       value={expenseInput.amount}
                       onChange={(e) =>
@@ -1264,8 +1342,9 @@ export const MarketingDashboard: React.FC = () => {
                       }
                     />
                     <button
+                      type='button'
                       onClick={addExpense}
-                      className='bg-pink-600 hover:bg-pink-700 text-white p-2 rounded-lg'
+                      className='bg-pink-600 hover:bg-pink-700 text-white p-2 rounded-lg z-20 relative cursor-pointer'
                     >
                       <Plus size={18} />
                     </button>
@@ -1283,7 +1362,7 @@ export const MarketingDashboard: React.FC = () => {
                           </span>
                           <button
                             onClick={() => deleteExpense(exp.id)}
-                            className='text-gray-600 hover:text-red-500 cursor-pointer'
+                            className='text-gray-600 hover:text-red-500 cursor-pointer z-20 relative'
                           >
                             <Trash2 size={12} />
                           </button>
@@ -1294,155 +1373,6 @@ export const MarketingDashboard: React.FC = () => {
                 </GlassCard>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* === ABA: ESTRATÉGIA === */}
-        {activeTab === 'strategy' && (
-          <div className='space-y-6 animate-fade-in'>
-            <GlassCard className='p-6'>
-              <div className='flex items-center gap-3 mb-6'>
-                <div className='p-2 bg-indigo-500/10 rounded-lg text-indigo-500'>
-                  <User size={20} />
-                </div>
-                <h2 className='text-xl font-bold text-white'>
-                  Persona & Identidade
-                </h2>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
-                    Perfil
-                  </label>
-                  <input
-                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm focus:border-indigo-500 outline-none'
-                    placeholder='Ex: João, 30 anos...'
-                    value={profile.strategy.personaName}
-                    onChange={(e) =>
-                      updateStrategy('personaName', e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
-                    Dores
-                  </label>
-                  <textarea
-                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm h-24 resize-none focus:border-red-500 outline-none'
-                    placeholder='O que tira o sono dele?'
-                    value={profile.strategy.personaPain}
-                    onChange={(e) =>
-                      updateStrategy('personaPain', e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <label className='text-[10px] text-gray-500 font-bold block mb-2 uppercase'>
-                    Desejos
-                  </label>
-                  <textarea
-                    className='w-full bg-black/40 border border-gray-700/50 rounded-xl p-3 text-white text-sm h-24 resize-none focus:border-green-500 outline-none'
-                    placeholder='Qual o sonho dele?'
-                    value={profile.strategy.personaDesire}
-                    onChange={(e) =>
-                      updateStrategy('personaDesire', e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            </GlassCard>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <GlassCard className='p-6 border-l-4 border-l-emerald-500'>
-                <h3 className='font-bold text-white mb-4 flex items-center gap-2'>
-                  <ArrowUpRight size={18} className='text-emerald-500' /> Forças
-                  & Oportunidades
-                </h3>
-                <textarea
-                  className='w-full bg-black/20 border border-gray-700/50 rounded-xl p-3 text-sm text-gray-300 h-32 resize-none outline-none focus:bg-black/40'
-                  placeholder='Liste seus pontos fortes...'
-                  value={profile.strategy.swotStrengths}
-                  onChange={(e) =>
-                    updateStrategy('swotStrengths', e.target.value)
-                  }
-                />
-              </GlassCard>
-              <GlassCard className='p-6 border-l-4 border-l-red-500'>
-                <h3 className='font-bold text-white mb-4 flex items-center gap-2'>
-                  <X size={18} className='text-red-500' /> Fraquezas & Ameaças
-                </h3>
-                <textarea
-                  className='w-full bg-black/20 border border-gray-700/50 rounded-xl p-3 text-sm text-gray-300 h-32 resize-none outline-none focus:bg-black/40'
-                  placeholder='Onde o concorrente ganha?'
-                  value={profile.strategy.swotWeaknesses}
-                  onChange={(e) =>
-                    updateStrategy('swotWeaknesses', e.target.value)
-                  }
-                />
-              </GlassCard>
-            </div>
-            <GlassCard className='p-6'>
-              <h3 className='font-bold mb-6 flex items-center gap-2 text-white'>
-                <Swords size={18} className='text-orange-500' /> Concorrentes
-              </h3>
-              <div className='grid grid-cols-1 sm:grid-cols-4 gap-2 mb-6'>
-                <input
-                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
-                  placeholder='Nome'
-                  value={compInput.name}
-                  onChange={(e) =>
-                    setCompInput({ ...compInput, name: e.target.value })
-                  }
-                />
-                <input
-                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
-                  placeholder='Ponto Forte'
-                  value={compInput.strength}
-                  onChange={(e) =>
-                    setCompInput({ ...compInput, strength: e.target.value })
-                  }
-                />
-                <input
-                  className='bg-black/40 border border-gray-700/50 rounded-lg p-2 text-white text-sm outline-none z-20 relative'
-                  placeholder='Ponto Fraco'
-                  value={compInput.weakness}
-                  onChange={(e) =>
-                    setCompInput({ ...compInput, weakness: e.target.value })
-                  }
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    addCompetitor();
-                  }}
-                  className='bg-orange-600 hover:bg-orange-700 text-white rounded-lg flex items-center justify-center z-20 relative cursor-pointer'
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                {profile.competitors.map((comp) => (
-                  <div
-                    key={comp.id}
-                    className='bg-gray-800/30 p-4 rounded-xl border border-gray-700/50 relative hover:border-gray-500 transition-colors'
-                  >
-                    <h4 className='font-bold text-white mb-2'>{comp.name}</h4>
-                    <p className='text-xs text-green-400 mb-1'>
-                      + {comp.strength}
-                    </p>
-                    <p className='text-xs text-red-400'>- {comp.weakness}</p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCompetitor(comp.id);
-                      }}
-                      className='absolute top-3 right-3 text-gray-600 hover:text-red-500 z-20 relative cursor-pointer'
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
           </div>
         )}
 
@@ -1458,6 +1388,7 @@ export const MarketingDashboard: React.FC = () => {
                 <div className='flex gap-2 relative z-20'>
                   {['Todos', 'Topo', 'Meio', 'Fundo'].map((f) => (
                     <button
+                      type='button'
                       key={f}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1506,6 +1437,7 @@ export const MarketingDashboard: React.FC = () => {
                   }
                 />
                 <button
+                  type='button'
                   onClick={(e) => {
                     e.stopPropagation();
                     addContent();
@@ -1599,11 +1531,11 @@ export const MarketingDashboard: React.FC = () => {
               <div className='space-y-4'>
                 <div>
                   <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
-                    Seguidores Atuais
+                    Seguidores
                   </label>
                   <input
-                    type='number'
-                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none z-20 relative'
+                    type='text'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
                     value={tempAudience.current}
                     onChange={(e) =>
                       setTempAudience({
@@ -1615,11 +1547,11 @@ export const MarketingDashboard: React.FC = () => {
                 </div>
                 <div>
                   <label className='text-[10px] uppercase font-bold text-emerald-500 mb-1 block'>
-                    Meta / Target
+                    Meta
                   </label>
                   <input
-                    type='number'
-                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none z-20 relative'
+                    type='text'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
                     value={tempAudience.target}
                     onChange={(e) =>
                       setTempAudience({
@@ -1630,6 +1562,7 @@ export const MarketingDashboard: React.FC = () => {
                   />
                 </div>
                 <button
+                  type='button'
                   onClick={(e) => {
                     e.stopPropagation();
                     saveAudience();
@@ -1644,13 +1577,41 @@ export const MarketingDashboard: React.FC = () => {
             {editingKpi === 'financial' && (
               <div className='space-y-4'>
                 <div>
-                  <label className='text-[10px] uppercase font-bold text-emerald-500 mb-1 block'>
-                    Meta de ROAS Global
+                  <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
+                    Gasto Total (Mês)
                   </label>
                   <input
-                    type='number'
-                    step='0.1'
-                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none z-20 relative'
+                    type='text'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
+                    value={tempFinance.spend}
+                    onChange={(e) =>
+                      setTempFinance({ ...tempFinance, spend: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
+                    Receita Total (Mês)
+                  </label>
+                  <input
+                    type='text'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
+                    value={tempFinance.revenue}
+                    onChange={(e) =>
+                      setTempFinance({
+                        ...tempFinance,
+                        revenue: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className='border-t border-gray-800 pt-2'>
+                  <label className='text-[10px] uppercase font-bold text-emerald-500 mb-1 block'>
+                    Meta ROAS
+                  </label>
+                  <input
+                    type='text'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
                     value={tempFinance.targetRoas}
                     onChange={(e) =>
                       setTempFinance({
@@ -1661,29 +1622,27 @@ export const MarketingDashboard: React.FC = () => {
                   />
                 </div>
                 <button
+                  type='button'
                   onClick={(e) => {
                     e.stopPropagation();
-                    saveFinancialTarget();
+                    saveFinancialData();
                   }}
                   className='w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-lg mt-2 z-20 relative cursor-pointer'
                 >
-                  Salvar Meta
+                  Salvar & Atualizar
                 </button>
               </div>
             )}
 
             {editingKpi === 'engagement' && (
               <div className='space-y-4'>
-                <p className='text-xs text-gray-400 mb-2'>
-                  Dados do último post para cálculo:
-                </p>
                 <div className='grid grid-cols-2 gap-2'>
                   <div>
                     <label className='text-[10px] uppercase font-bold text-gray-500 mb-1 block'>
                       Likes
                     </label>
                     <input
-                      type='number'
+                      type='text'
                       className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
                       value={tempEngagement.likes}
                       onChange={(e) =>
@@ -1699,7 +1658,7 @@ export const MarketingDashboard: React.FC = () => {
                       Comentários
                     </label>
                     <input
-                      type='number'
+                      type='text'
                       className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
                       value={tempEngagement.comments}
                       onChange={(e) =>
@@ -1713,12 +1672,11 @@ export const MarketingDashboard: React.FC = () => {
                 </div>
                 <div>
                   <label className='text-[10px] uppercase font-bold text-pink-500 mb-1 block'>
-                    Meta de Engajamento (%)
+                    Meta (%)
                   </label>
                   <input
-                    type='number'
-                    step='0.1'
-                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white focus:border-pink-500 outline-none z-20 relative'
+                    type='text'
+                    className='w-full bg-black/40 border border-gray-700 rounded-lg p-3 text-white outline-none z-20 relative'
                     value={tempEngagement.target}
                     onChange={(e) =>
                       setTempEngagement({
@@ -1729,6 +1687,7 @@ export const MarketingDashboard: React.FC = () => {
                   />
                 </div>
                 <button
+                  type='button'
                   onClick={(e) => {
                     e.stopPropagation();
                     saveEngagement();

@@ -97,6 +97,18 @@ const App: React.FC = () => {
           }
         />
 
+        {/* Rota para Calendário/Agenda Geral (Caso clique no título do card) */}
+        <Route
+          path='/calendar'
+          element={
+            <ProtectedRoute user={user}>
+              <Layout user={user} onLogout={handleLogout}>
+                <div className='p-8 text-white'>Agenda Completa (Em breve)</div>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path='/templates'
           element={
@@ -128,8 +140,22 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Rota PLURAL (usada pela lista de projetos) */}
         <Route
           path='/projects/:id'
+          element={
+            <ProtectedRoute user={user}>
+              <Layout user={user} onLogout={handleLogout}>
+                <ProjectDetails />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* --- NOVA ROTA SINGULAR (Para conectar com o clique do Dashboard) --- */}
+        <Route
+          path='/project/:id'
           element={
             <ProtectedRoute user={user}>
               <Layout user={user} onLogout={handleLogout}>
