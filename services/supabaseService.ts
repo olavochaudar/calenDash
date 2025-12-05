@@ -8,433 +8,301 @@ import {
   Product,
 } from '../types';
 
-const MOCK_USER: User = {
-  id: 'user-123',
-  email: 'usuario@calendash.com',
-  name: 'Alex Planejador',
-  role: 'admin',
-  avatar_url: 'https://picsum.photos/100/100',
-  department: 'Planejamento',
+// --- CHAVES DE ARMAZENAMENTO ---
+const KEYS = {
+  USER: 'calendash_user_v1',
+  PROJECTS: 'calendash_projects_v1',
+  PRODUCTS: 'calendash_products_v1',
+  CLIENTS: 'calendash_clients_v1',
 };
 
-const MOCK_EVENTS: Project[] = [
-  {
-    id: '1',
-    name: 'Reunião de Kick-off',
-    type: 'Reunião',
-    status: 'scheduled',
-    created_at: '2023-10-25',
-    brief: 'Alinhamento inicial do projeto Alpha.',
-    content: 'Pauta: Cronograma, Responsáveis, Orçamento.',
-    priority: 'high',
-    tasks: [
-      {
-        id: 't1',
-        text: 'Preparar apresentação de slides',
-        completed: true,
-        created_at: '2023-10-20T10:00:00Z',
-      },
-      {
-        id: 't2',
-        text: 'Confirmar presença dos stakeholders',
-        completed: false,
-        created_at: '2023-10-21T14:30:00Z',
-      },
-      {
-        id: 't3',
-        text: 'Reservar sala de reunião',
-        completed: true,
-        created_at: '2023-10-22T09:15:00Z',
-      },
-    ],
-    attachments: [
-      'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=400&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=400&auto=format&fit=crop',
-    ],
-  },
-  {
-    id: '2',
-    name: 'Entrega de Conteúdo Social',
-    type: 'Deadline',
-    status: 'scheduled',
-    created_at: '2023-10-26',
-    brief: 'Posts Instagram Semana 42',
-    content: '',
-    priority: 'medium',
-    tasks: [
-      {
-        id: 't1',
-        text: 'Revisar copy dos posts',
-        completed: false,
-        created_at: '2023-10-24T11:00:00Z',
-      },
-      {
-        id: 't2',
-        text: 'Aprovar design das artes',
-        completed: false,
-        created_at: '2023-10-24T11:05:00Z',
-      },
-    ],
-    attachments: [],
-  },
-  {
-    id: '3',
-    name: 'Call Mensal de Resultados',
-    type: 'Recorrente',
-    status: 'completed',
-    created_at: '2023-10-20',
-    brief: 'Apresentação de KPIs.',
-    content: 'Slide deck em anexo.',
-    priority: 'high',
-  },
-  {
-    id: '4',
-    name: 'Dentista',
-    type: 'Pessoal',
-    status: 'scheduled',
-    created_at: '2023-10-28',
-    brief: 'Dr. Silva - 15h',
-    content: '',
-    priority: 'low',
-  },
-];
+// --- DADOS PADRÃO (Para quando não houver nada salvo) ---
+const DEFAULT_USER: User = {
+  id: 'user-123',
+  email: 'admin@calendash.com',
+  name: 'Gestor',
+  role: 'admin',
+  avatar_url: '',
+  department: 'Geral',
+};
 
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    name: 'Licença ERP Pro',
-    description: 'Assinatura mensal do software',
-    cost_price: 50.0,
-    sale_price: 150.0,
-    current_stock: 999,
-    min_stock: 10,
-    created_at: '2023-10-01',
-  },
-  {
-    id: 'p2',
-    name: 'Consultoria de Implantação',
-    description: 'Pacote de 10 horas técnicas',
-    cost_price: 800.0,
-    sale_price: 2500.0,
-    current_stock: 5,
-    min_stock: 2,
-    created_at: '2023-10-05',
-  },
-  {
-    id: 'p3',
-    name: 'Teclado Mecânico RGB',
-    description: 'Periférico para desenvolvedores',
-    cost_price: 120.0,
-    sale_price: 350.0,
-    current_stock: 45,
-    min_stock: 15,
-    created_at: '2023-10-10',
-  },
-];
-
-export const MOCK_TEMPLATES: Template[] = [
+const DEFAULT_TEMPLATES: Template[] = [
   {
     id: 1,
-    title: 'Calendário Editorial Social Media',
+    title: 'Calendário Editorial',
     category: 'Marketing',
-    image_url:
-      'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop',
-    shortDesc: 'Organize posts, stories e reels para todas as redes.',
-    fullDesc:
-      'Este modelo é perfeito para gestores de mídias sociais. Ele inclui visualizações semanais e mensais, campos para status de aprovação, links de assets e legendas. Otimize seu fluxo de publicação e nunca mais perca uma data comemorativa.',
-    features: [
-      'Planejador de Feed',
-      'Status de Aprovação',
-      'Banco de Hashtags',
-      'Métricas de Performance',
-    ],
+    image_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113',
+    shortDesc: 'Organize posts e stories.',
+    fullDesc: 'Ideal para gestores.',
+    features: ['Planejador', 'Status'],
     popularity: 98,
   },
   {
     id: 2,
-    title: 'Cronograma de Projeto Ágil',
+    title: 'Gestão Financeira',
     category: 'Negócios',
-    image_url:
-      'https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000&auto=format&fit=crop',
-    shortDesc: 'Sprints, dailies e entregas para times de tech.',
-    fullDesc:
-      'Baseado na metodologia Scrum, este calendário foca em ciclos de 2 semanas (Sprints). Organize suas dailies, reviews e retrospectives. Ideal para manter o time alinhado e visualizar o progresso das tarefas.',
-    features: [
-      'Ciclos de Sprint',
-      'Datas de Release',
-      'Meeting Planner',
-      'Blockers Log',
-    ],
+    image_url: 'https://images.unsplash.com/photo-1554224155-9844c6ef315a',
+    shortDesc: 'Controle de fluxo de caixa.',
+    fullDesc: 'Planilha completa.',
+    features: ['Entradas', 'Saídas'],
     popularity: 85,
   },
-  {
-    id: 3,
-    title: 'Agenda de Treinos Fitness',
-    category: 'Saúde',
-    image_url:
-      'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000&auto=format&fit=crop',
-    shortDesc: 'Planeje seus exercícios e descanso.',
-    fullDesc:
-      'Acompanhe sua evolução física com este calendário de treinos. Defina grupos musculares por dia, dias de descanso ativo e registre suas cargas. A consistência é a chave para o resultado.',
-    features: [
-      'Divisão de Treino ABC',
-      'Registro de Cardio',
-      'Controle de Peso',
-      'Metas Mensais',
-    ],
-    popularity: 72,
-  },
-  {
-    id: 4,
-    title: 'Planejamento de Estudos',
-    category: 'Educação',
-    image_url:
-      'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1000&auto=format&fit=crop',
-    shortDesc: 'Grade horária para estudantes e concursos.',
-    fullDesc:
-      'Maximize seu aprendizado distribuindo as matérias ao longo da semana. Utilize a técnica de pomodoro integrada e reserve tempo para revisões espaçadas.',
-    features: [
-      'Grade Horária',
-      'Revisão Espaçada',
-      'Datas de Provas',
-      'Progresso de Matéria',
-    ],
-    popularity: 90,
-  },
 ];
 
-const MOCK_CLIENTS: Client[] = [
-  {
-    id: 'c1',
-    name: 'TechSolutions Ltda',
-    email: 'contact@techsolutions.com',
-    company: 'TI & Dev',
-    role: 'Tech Lead',
-    salary: 12500,
-    phone: '(11) 99999-1234',
-    status: 'active',
-    plan: 'Enterprise',
-    projects_count: 12,
-    created_at: '2023-01-15',
-  },
-  {
-    id: 'c2',
-    name: 'Maria Clara',
-    email: 'maria@marketing.com',
-    company: 'Marketing',
-    role: 'Social Media',
-    salary: 4500,
-    phone: '(21) 98888-5678',
-    status: 'active',
-    plan: 'Pro',
-    projects_count: 8,
-    created_at: '2023-03-22',
-  },
-  {
-    id: 'c3',
-    name: 'Roberto Alves',
-    email: 'roberto@design.com',
-    company: 'Design',
-    role: 'Designer Senior',
-    salary: 7800,
-    phone: '(31) 97777-4321',
-    status: 'inactive',
-    plan: 'Basic',
-    projects_count: 3,
-    created_at: '2023-05-10',
-  },
-  {
-    id: 'c4',
-    name: 'Global Corp',
-    email: 'admin@globalcorp.com',
-    company: 'Financeiro',
-    role: 'CFO',
-    salary: 22000,
-    phone: '(11) 91234-5678',
-    status: 'pending',
-    plan: 'Enterprise',
-    projects_count: 0,
-    created_at: '2023-11-01',
-  },
-];
+// --- FUNÇÕES DE PERSISTÊNCIA (O Segredo) ---
+const loadData = <T>(key: string, defaultValue: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : defaultValue;
+  } catch (e) {
+    console.error(`Erro ao carregar ${key}`, e);
+    return defaultValue;
+  }
+};
+
+const saveData = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error(`Erro ao salvar ${key}`, e);
+  }
+};
+
+// --- CARREGAMENTO INICIAL DOS DADOS ---
+// Agora as variáveis nascem lendo a memória do navegador
+let CURRENT_USER = loadData<User>(KEYS.USER, DEFAULT_USER);
+let MOCK_EVENTS = loadData<Project[]>(KEYS.PROJECTS, []);
+let MOCK_PRODUCTS = loadData<Product[]>(KEYS.PRODUCTS, []);
+let MOCK_CLIENTS = loadData<Client[]>(KEYS.CLIENTS, []);
 
 export const supabaseService = {
+  // --- AUTENTICAÇÃO ---
   auth: {
     signInWithPassword: async (email: string, password: string) => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Simula login: qualquer email funciona para teste
       if (email) {
-        localStorage.setItem('calendash_session', JSON.stringify(MOCK_USER));
-        return { data: { user: MOCK_USER }, error: null };
+        return { data: { user: CURRENT_USER }, error: null };
       }
       return { data: null, error: { message: 'Erro no login' } };
     },
     signUp: async (email: string, password: string, name?: string) => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       const newUser = {
-        ...MOCK_USER,
+        ...DEFAULT_USER,
         email,
         name: name || email.split('@')[0],
       };
-      localStorage.setItem('calendash_session', JSON.stringify(newUser));
+      CURRENT_USER = newUser;
+      saveData(KEYS.USER, CURRENT_USER);
       return { data: { user: newUser }, error: null };
     },
     signOut: async () => {
-      localStorage.removeItem('calendash_session');
+      // Opcional: Limpar sessão ou dados
+      // localStorage.clear();
     },
     getSession: () => {
-      const session = localStorage.getItem('calendash_session');
-      return session ? JSON.parse(session) : null;
+      return CURRENT_USER;
+    },
+    getUser: async () => {
+      return { data: { user: CURRENT_USER } };
     },
     updateUser: async (updates: Partial<User>) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const current = JSON.parse(
-        localStorage.getItem('calendash_session') || '{}'
-      );
-      const updated = { ...current, ...updates };
-      localStorage.setItem('calendash_session', JSON.stringify(updated));
-      return { data: updated, error: null };
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      CURRENT_USER = { ...CURRENT_USER, ...updates };
+      saveData(KEYS.USER, CURRENT_USER);
+      return { data: CURRENT_USER, error: null };
     },
+  },
+
+  // --- CLIENTE DO BANCO DE DADOS (Simulado com Persistência) ---
+  // Acessador direto para compatibilidade
+  get client() {
+    return this;
   },
 
   from: (table: string) => {
     return {
-      select: async (p0: string, p1: { count: string; head: boolean }) => {
-        await new Promise((resolve) => setTimeout(resolve, 400));
+      // --- SELECT ---
+      select: async (columns?: string) => {
+        await new Promise((resolve) => setTimeout(resolve, 200)); // Pequeno delay para parecer real
 
-        if (table === 'projects')
+        if (table === 'projects' || table === 'events')
           return { data: [...MOCK_EVENTS], error: null };
-        if (table === 'templates')
-          return { data: [...MOCK_TEMPLATES], error: null };
-        if (table === 'clients') {
-          return { data: [...MOCK_CLIENTS], error: null };
-        }
-        if (table === 'products') {
+        if (table === 'products')
           return { data: [...MOCK_PRODUCTS], error: null };
+        if (table === 'clients')
+          return { data: [...MOCK_CLIENTS], error: null };
+        if (table === 'templates')
+          return { data: [...DEFAULT_TEMPLATES], error: null };
+
+        // Tabelas de Relatórios (Mockados estáticos por enquanto)
+        if (table === 'transactions') {
+          // Gera transações baseadas nos projetos para o financeiro ter dados
+          const transactions = MOCK_EVENTS.map((p) => ({
+            id: p.id,
+            amount: 1500, // Valor fictício por projeto
+            type: 'income',
+            category: 'Venda de Projeto',
+            date: p.created_at,
+          }));
+          return { data: transactions, error: null };
         }
-        if (table === 'analytics') {
-          const chartData: ChartData[] = [
-            { name: 'Seg', value: 4, secondary: 1 },
-            { name: 'Ter', value: 6, secondary: 2 },
-            { name: 'Qua', value: 8, secondary: 0 },
-            { name: 'Qui', value: 5, secondary: 1 },
-            { name: 'Sex', value: 7, secondary: 3 },
-            { name: 'Sáb', value: 2, secondary: 0 },
-            { name: 'Dom', value: 1, secondary: 0 },
-          ];
-          return { data: chartData, error: null };
-        }
-        if (table === 'kpis') {
-          const kpis: KpiData[] = [
-            {
-              label: 'Eventos Agendados',
-              value: '42',
-              change: 15,
-              trend: 'up',
-            },
-            { label: 'Horas Ocupadas', value: '126h', change: 8, trend: 'up' },
-            { label: 'Cancelamentos', value: '3', change: -5, trend: 'down' },
-            { label: 'Modelos em Uso', value: '5', change: 2, trend: 'up' },
-          ];
-          return { data: kpis, error: null };
-        }
+
         return { data: [], error: null };
       },
-      insert: async (data: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        if (table === 'projects') {
-          const newEvent = {
-            ...data[0],
-            // Respect existing ID if provided (for Undo), otherwise generate
-            id: data[0].id || Math.random().toString(36).substr(2, 9),
-            created_at: data[0].created_at || new Date().toISOString(),
-            tasks: data[0].tasks || [],
-            attachments: data[0].attachments || [],
-          };
-          MOCK_EVENTS.push(newEvent);
-          return { data: [newEvent], error: null };
-        }
-        if (table === 'clients') {
-          const newClient = {
-            ...data[0],
-            id: data[0].id || Math.random().toString(36).substr(2, 9),
-            created_at: new Date().toISOString(),
-          };
-          MOCK_CLIENTS.push(newClient);
-          return { data: [newClient], error: null };
+
+      // --- INSERT ---
+      insert: async (data: any[]) => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const item = data[0];
+        const newId = item.id || crypto.randomUUID(); // Gera ID real
+        const newItem = {
+          ...item,
+          id: newId,
+          created_at: new Date().toISOString(),
+        };
+
+        if (table === 'projects' || table === 'events') {
+          MOCK_EVENTS = [newItem, ...MOCK_EVENTS]; // Adiciona no topo
+          saveData(KEYS.PROJECTS, MOCK_EVENTS); // SALVA NO NAVEGADOR
+          return { data: [newItem], error: null };
         }
         if (table === 'products') {
-          const newProduct = {
-            ...data[0],
-            id: data[0].id || Math.random().toString(36).substr(2, 9),
-            created_at: new Date().toISOString(),
-          };
-          MOCK_PRODUCTS.push(newProduct);
-          return { data: [newProduct], error: null };
+          MOCK_PRODUCTS = [newItem, ...MOCK_PRODUCTS];
+          saveData(KEYS.PRODUCTS, MOCK_PRODUCTS); // SALVA NO NAVEGADOR
+          return { data: [newItem], error: null };
+        }
+        if (table === 'clients') {
+          MOCK_CLIENTS = [newItem, ...MOCK_CLIENTS];
+          saveData(KEYS.CLIENTS, MOCK_CLIENTS); // SALVA NO NAVEGADOR
+          return { data: [newItem], error: null };
         }
         return { data: null, error: null };
       },
+
+      // --- UPDATE (Prepara o update) ---
       update: (updates: any) => {
         return {
           eq: async (col: string, val: any) => {
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            if (table === 'projects' && col === 'id') {
-              const idx = MOCK_EVENTS.findIndex((p) => p.id === val);
-              if (idx > -1) {
-                MOCK_EVENTS[idx] = { ...MOCK_EVENTS[idx], ...updates };
-                return { data: [MOCK_EVENTS[idx]], error: null };
-              }
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            if (col !== 'id')
+              return { data: null, error: 'Apenas ID suportado' };
+
+            if (table === 'projects' || table === 'events') {
+              MOCK_EVENTS = MOCK_EVENTS.map((item) =>
+                item.id === val ? { ...item, ...updates } : item
+              );
+              saveData(KEYS.PROJECTS, MOCK_EVENTS); // SALVA
+              return { data: [updates], error: null };
             }
-            if (table === 'clients' && col === 'id') {
-              const idx = MOCK_CLIENTS.findIndex((c) => c.id === val);
-              if (idx > -1) {
-                MOCK_CLIENTS[idx] = { ...MOCK_CLIENTS[idx], ...updates };
-                return { data: [MOCK_CLIENTS[idx]], error: null };
-              }
+            if (table === 'products') {
+              MOCK_PRODUCTS = MOCK_PRODUCTS.map((item) =>
+                item.id === val ? { ...item, ...updates } : item
+              );
+              saveData(KEYS.PRODUCTS, MOCK_PRODUCTS); // SALVA
+              return { data: [updates], error: null };
             }
-            if (table === 'products' && col === 'id') {
-              const idx = MOCK_PRODUCTS.findIndex((p) => p.id === val);
-              if (idx > -1) {
-                MOCK_PRODUCTS[idx] = { ...MOCK_PRODUCTS[idx], ...updates };
-                return { data: [MOCK_PRODUCTS[idx]], error: null };
-              }
+            if (table === 'clients') {
+              MOCK_CLIENTS = MOCK_CLIENTS.map((item) =>
+                item.id === val ? { ...item, ...updates } : item
+              );
+              saveData(KEYS.CLIENTS, MOCK_CLIENTS); // SALVA
+              return { data: [updates], error: null };
             }
-            return { data: null, error: 'Not found' };
+            return { data: null, error: null };
           },
         };
       },
-      delete: async () => {
-        return { error: null };
-      },
-      eq: (col: string, val: any) => {
+
+      // --- DELETE ---
+      delete: () => {
         return {
-          select: async () => {
-            if (table === 'projects' && col === 'id') {
-              const evt = MOCK_EVENTS.find((p) => p.id === val);
-              return { data: evt ? [evt] : [], error: null };
+          eq: async (col: string, val: any) => {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            if (table === 'projects' || table === 'events') {
+              MOCK_EVENTS = MOCK_EVENTS.filter((p) => p.id !== val);
+              saveData(KEYS.PROJECTS, MOCK_EVENTS); // SALVA A REMOÇÃO
             }
-            if (table === 'templates' && col === 'id') {
-              const tpl = MOCK_TEMPLATES.find((t) => t.id === Number(val));
-              return { data: tpl ? [tpl] : [], error: null };
+            if (table === 'products') {
+              MOCK_PRODUCTS = MOCK_PRODUCTS.filter((p) => p.id !== val);
+              saveData(KEYS.PRODUCTS, MOCK_PRODUCTS); // SALVA A REMOÇÃO
             }
-            return { data: [], error: null };
-          },
-          delete: async () => {
-            if (table === 'projects' && col === 'id') {
-              const idx = MOCK_EVENTS.findIndex((p) => p.id === val);
-              if (idx > -1) MOCK_EVENTS.splice(idx, 1);
-            }
-            if (table === 'clients' && col === 'id') {
-              const idx = MOCK_CLIENTS.findIndex((c) => c.id === val);
-              if (idx > -1) MOCK_CLIENTS.splice(idx, 1);
-            }
-            if (table === 'products' && col === 'id') {
-              const idx = MOCK_PRODUCTS.findIndex((p) => p.id === val);
-              if (idx > -1) MOCK_PRODUCTS.splice(idx, 1);
+            if (table === 'clients') {
+              MOCK_CLIENTS = MOCK_CLIENTS.filter((c) => c.id !== val);
+              saveData(KEYS.CLIENTS, MOCK_CLIENTS); // SALVA A REMOÇÃO
             }
             return { error: null };
           },
         };
       },
+
+      // --- FILTROS (EQ, NEQ, ORDER, LIMIT, GTE) ---
+      // Simulação básica para não quebrar a UI
+      eq: (col: string, val: any) => {
+        return {
+          select: async () => {
+            // Lógica simples de filtro para ID
+            if (table === 'projects' || table === 'events') {
+              const found = MOCK_EVENTS.find((i) => i.id === val);
+              return { data: found ? found : null, error: null };
+            }
+            return { data: null, error: null };
+          },
+          single: async () => {
+            if (table === 'projects' || table === 'events') {
+              const found = MOCK_EVENTS.find((i) => i.id === val);
+              return { data: found || null, error: null };
+            }
+            return { data: null, error: null };
+          },
+          delete: async () => {
+            // Atalho para delete direto
+            if (table === 'projects' || table === 'events') {
+              MOCK_EVENTS = MOCK_EVENTS.filter((p) => p.id !== val);
+              saveData(KEYS.PROJECTS, MOCK_EVENTS);
+            }
+            if (table === 'products') {
+              MOCK_PRODUCTS = MOCK_PRODUCTS.filter((p) => p.id !== val);
+              saveData(KEYS.PRODUCTS, MOCK_PRODUCTS);
+            }
+            return { error: null };
+          },
+        };
+      },
+
+      // Funções auxiliares para não quebrar o encadeamento (chaining)
+      neq: () => ({
+        order: () => ({
+          limit: async () => {
+            // Retorna o primeiro projeto se houver
+            if (
+              (table === 'projects' || table === 'events') &&
+              MOCK_EVENTS.length > 0
+            ) {
+              return { data: [MOCK_EVENTS[0]], error: null };
+            }
+            return { data: [], error: null };
+          },
+        }),
+      }),
+      gte: () => ({
+        order: () => ({
+          limit: async () => {
+            // Simula busca de próximos eventos
+            if (
+              (table === 'projects' || table === 'events') &&
+              MOCK_EVENTS.length > 0
+            ) {
+              return { data: [MOCK_EVENTS[0]], error: null };
+            }
+            return { data: [], error: null };
+          },
+        }),
+      }),
+      order: () => ({ limit: async () => ({ data: [], error: null }) }),
     };
   },
 };
